@@ -305,6 +305,7 @@ static bool
 expand_target_clones (struct cgraph_node *node, bool definition)
 {
   int i;
+  definition = true;
   /* Parsing target attributes separated by comma.  */
   tree attr_target = lookup_attribute ("target_clones",
 				       DECL_ATTRIBUTES (node->decl));
@@ -385,9 +386,10 @@ expand_target_clones (struct cgraph_node *node, bool definition)
   before = decl1_v;
   DECL_FUNCTION_VERSIONED (node->decl) = 1;
 
+  char attrs2[num_attrs][5] = {"sve","sve2"};
   for (i = 0; i < attrnum; i++)
     {
-      char *attr = attrs[i];
+      char *attr = attrs2[i];
 
       /* Create new target clone.  */
       tree attributes = make_attribute (new_attr_name, attr,

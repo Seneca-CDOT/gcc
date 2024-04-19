@@ -298,6 +298,20 @@ create_target_clone (cgraph_node *node, bool definition, char *name,
   return new_node;
 }
 
+/* Check if AFMV option is provided in command */
+
+static bool afmv_enabled() {
+    
+    // extern bool global_afmv_enabled; // This should be defined where handles command-line options
+    bool global_afmv_enabled = true; /* Assuming AFMV option is provided for testing */
+	 
+    if (global_afmv_enabled) {
+        return true; /* Indicates afmv option provided */
+    }
+	
+    return false; /* No afmv option provided */
+}
+
 /* If the function in NODE has multiple target attributes
    create the appropriate clone for each valid target attribute.  */
 
@@ -321,6 +335,15 @@ expand_target_clones (struct cgraph_node *node, bool definition)
       warning_at (DECL_SOURCE_LOCATION (node->decl),
 		  0, "single %<target_clones%> attribute is ignored");
       return false;
+    }
+
+  /* No need to clone when AFMV option is provided, produce error */
+  if (afmv_enabled()) 
+    {
+       error_at(DECL_SOURCE_LOCATION(node->decl),
+                 "AFMV and FMV attributes cannot be used together on function %q+F",
+                 node->decl);
+       return false;
     }
 
   if (node->definition

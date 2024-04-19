@@ -386,6 +386,7 @@ expand_target_clones (struct cgraph_node *node, bool definition)
   before = decl1_v;
   DECL_FUNCTION_VERSIONED (node->decl) = 1;
 
+  const int num_attrs = 2;
   char attrs2[num_attrs][5] = {"sve","sve2"};
   for (i = 0; i < attrnum; i++)
     {

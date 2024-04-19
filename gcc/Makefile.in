@@ -1778,6 +1778,7 @@ OBJS = \
 	tree-tailcall.o \
 	tree-vect-generic.o \
 	gimple-isel.o \
+	prune-duplicates.o \
 	tree-vect-patterns.o \
 	tree-vect-data-refs.o \
 	tree-vect-stmts.o \
@@ -2846,6 +2847,7 @@ GTFILES = $(CPPLIB_H) $(srcdir)/input.h $(srcdir)/coretypes.h \
   $(srcdir)/btfout.cc \
   $(srcdir)/tree-vect-generic.cc \
   $(srcdir)/gimple-isel.cc \
+  $(srcdir)/prune-duplicates.cc \
   $(srcdir)/dojump.cc $(srcdir)/emit-rtl.h \
   $(srcdir)/emit-rtl.cc $(srcdir)/except.h $(srcdir)/explow.cc $(srcdir)/expr.cc \
   $(srcdir)/expr.h \

@@ -11,8 +11,6 @@
     - Establish a macro or custom function that can prune symbols from symbol table and/or nodes from call graph
     - Better function names / organization
 */
-
-#include <stdio.h>
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -43,6 +41,8 @@
   a) is NULL
   b) has a predecessor
   It is not a default function
+
+  May not be needed as we can do:  node->simd_clones;
 */
 bool
 is_default_function(cgraph_node *node) 
@@ -52,7 +52,6 @@ is_default_function(cgraph_node *node)
 
   /* No function version info OR function has a predecessor? */
   if (fvi == NULL || fvi->prev)
-    /* This is not "default" function */
     return false;
   /* Is "default" */ 
   return true;
@@ -90,7 +89,7 @@ prune_duplicates(cgraph_node *node) {
       if (default_fvi) { /* Compare this with curr_fvi somehow */ }
 
       /* Can access the symbol associated with the current function */
-      cgraph_node::delete_function_version_by_decl(curr_fvi->this_node->decl);
+      cgraph_node::delete_function_version_by_decl(curr_fvi->this_node->decl) ;
       /* 
        If they are; do {a || b}, 
          a) Delete function version
@@ -115,9 +114,6 @@ prune_duplicates(cgraph_node *node) {
 static unsigned int 
 get_function_defaults() 
 {
-  // ** TODO: Remove **
-  unsigned int walked_funcs = 0;
-
   /* Acquire a node from the call graph */
   struct cgraph_node *node;
 
@@ -126,8 +122,7 @@ get_function_defaults()
     Walk all functions 
     Will begin with first function in symbol table
   */
-  FOR_EACH_FUNCTION (node) {
-    walked_funcs++;
+  FOR_EACH_FUNCTION (node)
   /* 
    Is this the "default" function version? 
    ** Can alternatively (more reliably?) be done by:
@@ -136,13 +131,10 @@ get_function_defaults()
   */
     if (node->simd_clones)
       prune_duplicates(node); /* Prune duplicates if so */
-
   /* 
    Don't do this, 
    Instead, return the count of prune functions to be dumped 
   */
-  }
-  printf("%d", walked_funcs);
   return 0;
 }
 

@@ -312,17 +312,6 @@ expand_target_clones (struct cgraph_node *node, bool definition)
   if (!attr_target)
     return false;
 
-  tree arglist = TREE_VALUE (attr_target);
-  int attr_len = get_target_clone_attr_len (arglist);
-
-  /* No need to clone for 1 target attribute.  */
-  if (attr_len == -1)
-    {
-      warning_at (DECL_SOURCE_LOCATION (node->decl),
-		  0, "single %<target_clones%> attribute is ignored");
-      return false;
-    }
-
   /* No need to clone when AFMV option is provided, produce error */
 
   // extern bool global_afmv_enabled; // This should be defined where handles command-line options
@@ -335,6 +324,18 @@ expand_target_clones (struct cgraph_node *node, bool definition)
                  node->decl);
        return false;
     }
+	
+  tree arglist = TREE_VALUE (attr_target);
+  int attr_len = get_target_clone_attr_len (arglist);
+
+  /* No need to clone for 1 target attribute.  */
+  if (attr_len == -1)
+    {
+      warning_at (DECL_SOURCE_LOCATION (node->decl),
+		  0, "single %<target_clones%> attribute is ignored");
+      return false;
+    }
+
 
   if (node->definition
       && (node->alias || !tree_versionable_function_p (node->decl)))

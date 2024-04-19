@@ -312,6 +312,19 @@ expand_target_clones (struct cgraph_node *node, bool definition)
   if (!attr_target)
     return false;
 
+  /* No need to clone when AFMV option is provided, produce error */
+
+  // extern bool global_afmv_enabled; // This should be defined where handles command-line options
+  bool global_afmv_enabled = true; /* Assuming AFMV option is provided here for testing */
+	
+  if (global_afmv_enabled) 
+    {
+       error_at(DECL_SOURCE_LOCATION(node->decl),
+                 "AFMV and FMV attributes cannot be used together on function %q+F",
+                 node->decl);
+       return false;
+    }
+	
   tree arglist = TREE_VALUE (attr_target);
   int attr_len = get_target_clone_attr_len (arglist);
 
@@ -322,6 +335,7 @@ expand_target_clones (struct cgraph_node *node, bool definition)
 		  0, "single %<target_clones%> attribute is ignored");
       return false;
     }
+
 
   if (node->definition
       && (node->alias || !tree_versionable_function_p (node->decl)))

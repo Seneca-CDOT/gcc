@@ -133,6 +133,43 @@ aarch64_handle_option (struct gcc_options *opts,
       opts->x_aarch64_flag_outline_atomics = val;
       return true;
 
+    case OPT_fafmv_:
+      if (arg) {
+          // List of features supported by AArch64
+          const char* aarch64_supported_versions[] = {
+              "sve", "sve2"
+          };
+          int num_versions = sizeof(aarch64_supported_versions) / sizeof(aarch64_supported_versions[0]);
+
+          char* features = xstrdup(arg);
+          char* feature = strtok(features, ",");
+          bool valid_features = true;
+
+          while (feature != NULL && valid_features) {
+              bool feature_found = false;
+              for (int i = 0; i < num_versions; i++) {
+                  if (strcmp(feature, aarch64_supported_versions[i]) == 0) {
+                      feature_found = true;
+                      break;
+                  }
+              }
+              if (!feature_found) {
+                  error_at(loc, "Unsupported feature '%s' in -fafmv for AArch64", feature);
+                  valid_features = false;
+              }
+              feature = strtok(NULL, ",");
+          }
+          free(features);
+          if (valid_features) {
+              printf("All specified AArch64 features are valid.\n");
+          } else {
+              return true;
+          }
+      } else {
+          error_at(loc, "Missing features for -fafmv option");
+      }
+    return true;
+
     default:
       return true;
     }

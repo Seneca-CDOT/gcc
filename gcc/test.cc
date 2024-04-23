@@ -31,12 +31,14 @@ namespace {
     public: pass_test_dump(gcc::context * ctxt): gimple_opt_pass(pass_data_gimple_test, ctxt) {}
 
     /* Pass gate function. */
-    bool gate(function*) final override {
+    bool
+    gate(function*) final override {
       return true;
     }
 
     /* Pass execution function. */
-    unsigned int execute(function*) final override {
+    unsigned int
+    execute(function*) final override {
       fprintf(stderr, "Hello World\n");
       return 0;
     }
@@ -44,6 +46,7 @@ namespace {
 }
 
 /* Create the test dump pass. */
-gimple_opt_pass * make_pass_test_dump(gcc::context * ctxt) {
+gimple_opt_pass
+*make_pass_test_dump(gcc::context * ctxt) {
   return new pass_test_dump(ctxt);
 }

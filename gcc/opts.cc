@@ -2771,7 +2771,11 @@ common_handle_option (struct gcc_options *opts,
 	= parse_sanitizer_options (arg, loc, code,
 				   opts->x_flag_sanitize_recover, value, true);
       break;
-
+    case OPT_afmv_:
+      if (arg!){
+          error_at(loc, "Please enter values for afmv option");
+        }
+      break;
     case OPT_fsanitize_trap_:
       opts->x_flag_sanitize_trap
 	= parse_sanitizer_options (arg, loc, code,

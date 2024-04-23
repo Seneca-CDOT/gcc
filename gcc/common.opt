@@ -235,6 +235,10 @@ Driver
 -assemble
 Driver Alias(S)
 
+-afmv=
+Common Joined Var(flag_afmv) Optimization
+Enable automatic function multiversioning with specified architectural features.
+
 -compile
 Driver Alias(c)
 

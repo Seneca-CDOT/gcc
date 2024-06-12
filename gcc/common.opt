@@ -1040,6 +1040,10 @@ fabi-version=
 Common Joined RejectNegative UInteger Var(flag_abi_version) Init(0)
 The version of the C++ ABI in use.
 
+fafmv-test=
+Common Joined Var(str_afmv_test)
+My test option for afmv error generation.
+
 faggressive-loop-optimizations
 Common Var(flag_aggressive_loop_optimizations) Optimization Init(1)
 Aggressively optimize loops using language constraints.

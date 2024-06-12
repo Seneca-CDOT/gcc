@@ -328,7 +328,8 @@ expand_target_clones (struct cgraph_node *node, bool definition)
   if (str_afmv_test)
   {
     error_at (DECL_SOURCE_LOCATION (node->decl), 
-    _("AFMV cannot be used together with FMV on function %q+F - either turn off AFMV, or remove %<target_clones%> attribute."), node->decl);
+    _("AFMV cannot be used together with FMV on function %q+F"), node->decl);
+    inform (DECL_SOURCE_LOCATION (node->decl), _("Either turn off AFMV, or remove %<target_clones%> attribute."));
     return false;
   }
 

@@ -431,6 +431,10 @@ Driver Separate Undocumented MissingArgError(missing filename after %qs)
 -verbose
 Driver Alias(v)
 
+fafmv=
+Common Joined Var(flag_fafmv) Optimization
+Function automatic multiversioning
+
 ;; The driver used to convert options such as --help into forms such
 ;; as -fhelp; the following four entries are for compatibility with
 ;; any direct uses of those (undocumented) -f forms

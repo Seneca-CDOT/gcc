@@ -73,6 +73,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "dfp.h"
 #include "asan.h"
 #include "ubsan.h"
+#include <cstring>
 
 /* Names of tree components.
    Used for printing out the tree and error messages.  */
@@ -15870,3 +15871,33 @@ tree_cc_tests ()
 #endif /* CHECKING_P */
 
 #include "gt-tree.h"
+
+/* The followings are the implementation of the prune cloned functions for AFMV */
+// Function to prune the specified functions
+void prune_cloned_functions(const char* prune_list[]) {
+    cgraph_node *node;
+
+    // Check if prune_list is empty (when prune_list[0] is nullptr)
+    if (prune_list[0] == nullptr) {
+        // If it's empty, return early or handle as necessary
+        return;
+    }
+
+    // Iterate through all functions in the call graph
+    FOR_EACH_FUNCTION(node) {
+        // Check if it's a function declaration
+        if (node->decl && TREE_CODE(node->decl) == FUNCTION_DECL) {
+            // Get function name
+            const char* function_name = IDENTIFIER_POINTER(DECL_NAME(node->decl));
+            
+            // Check if the function should be pruned
+            for (int i = 0; prune_list[i] != nullptr; ++i) {
+                if (strcmp(function_name, prune_list[i]) == 0) {
+                    // Remove the node from the call graph
+                    node->remove();
+                    break; // No need to continue checking once found
+                }
+            }
+        }
+    }
+}

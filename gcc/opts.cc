@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "version.h"
 #include "selftest.h"
 #include "file-prefix-map.h"
+#include "afmv.h"
 
 /* In this file all option sets are explicit.  */
 #undef OPTION_SET_P
@@ -2750,6 +2751,8 @@ common_handle_option (struct gcc_options *opts,
       if (!arg) {
         error_at(loc, "Missing options");
       } else {
+	unsigned int afmv_cnt = 0;
+        char* afmv_targets[AFMV_MAX_ARRAY_SIZE];
         const char* supported_list[] = {
           "simd", "neon", "sve", "sve2"
         };
@@ -2768,6 +2771,8 @@ common_handle_option (struct gcc_options *opts,
           if (!is_found) {
               error_at(loc, "Unsupported option '%s'", feature);
               is_valid = false;
+          } else {
+              afmv_targets[afmv_cnt++] = feature;
           }
           feature = strtok(NULL, ",");
         }

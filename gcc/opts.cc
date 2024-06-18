@@ -2779,6 +2779,7 @@ common_handle_option (struct gcc_options *opts,
         free(features);
         if (is_valid) {
           printf("All option are valid.\n");
+	  afmv_cnt--; // default count is set to 0
         } else {
           break;
         }

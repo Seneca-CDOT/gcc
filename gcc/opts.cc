@@ -2751,8 +2751,8 @@ common_handle_option (struct gcc_options *opts,
       if (!arg) {
         error_at(loc, "Missing options");
       } else {
-	unsigned int afmv_cnt = 0;
-        char* afmv_targets[AFMV_MAX_ARRAY_SIZE];
+	//unsigned int afmv_cnt = 0;
+        //char* afmv_targets[AFMV_MAX_ARRAY_SIZE];
         const char* supported_list[] = {
           "simd", "neon", "sve", "sve2"
         };
@@ -2771,15 +2771,15 @@ common_handle_option (struct gcc_options *opts,
           if (!is_found) {
               error_at(loc, "Unsupported option '%s'", feature);
               is_valid = false;
-          } else {
-              afmv_targets[afmv_cnt++] = feature;
+          //} else {
+              //afmv_targets[afmv_cnt++] = feature;
           }
           feature = strtok(NULL, ",");
         }
         free(features);
         if (is_valid) {
-          printf("All option are valid.\n");
-	  afmv_cnt--; // default count is set to 0
+          //printf("All option are valid.\n");
+	  //afmv_cnt--; // default count is set to 0
         } else {
           break;
         }

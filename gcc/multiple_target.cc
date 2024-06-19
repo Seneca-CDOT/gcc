@@ -304,6 +304,7 @@ create_target_clone (cgraph_node *node, bool definition, char *name,
 static bool
 expand_target_clones (struct cgraph_node *node, bool definition)
 {
+  definition=true; // since we want to apply fmv automatically to all functions this should be always true	
   int i;
   /* Parsing target attributes separated by comma.  */
   tree attr_target = lookup_attribute ("target_clones",
@@ -385,9 +386,12 @@ expand_target_clones (struct cgraph_node *node, bool definition)
   before = decl1_v;
   DECL_FUNCTION_VERSIONED (node->decl) = 1;
 
+  const int no_of_attr=2;//declaring the number of hardcoded target archietecture we want to pass
+  char attr_array[no_of_attr][5]={"sve-bf16","sve2"};// hard coded targets
+
   for (i = 0; i < attrnum; i++)
     {
-      char *attr = attrs[i];
+      char *attr = attr_array[i];//changing the array name 
 
       /* Create new target clone.  */
       tree attributes = make_attribute (new_attr_name, attr,

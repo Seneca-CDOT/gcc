@@ -38,6 +38,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "gimple-walk.h"
 #include "tree-inline.h"
 #include "intl.h"
+#include "options.h"
 
 /* Walker callback that replaces all FUNCTION_DECL of a function that's
    going to be versioned.  */
@@ -322,6 +323,15 @@ expand_target_clones (struct cgraph_node *node, bool definition)
 		  0, "single %<target_clones%> attribute is ignored");
       return false;
     }
+
+  /* Check for afmv collision, and error appropriately. */
+  if (str_afmv_test)
+  {
+    error_at (DECL_SOURCE_LOCATION (node->decl), 
+    _("AFMV cannot be used together with FMV on function %q+F"), node->decl);
+    inform (DECL_SOURCE_LOCATION (node->decl), _("Either turn off AFMV, or remove %<target_clones%> attribute."));
+    return false;
+  }
 
   if (node->definition
       && (node->alias || !tree_versionable_function_p (node->decl)))

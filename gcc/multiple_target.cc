@@ -325,7 +325,7 @@ expand_target_clones (struct cgraph_node *node, bool definition)
     }
 
   /* Check for afmv collision, and error appropriately. */
-  if (str_afmv_test)
+  if (flag_fafmv)
   {
     error_at (DECL_SOURCE_LOCATION (node->decl), 
     _("AFMV cannot be used together with FMV on function %q+F"), node->decl);

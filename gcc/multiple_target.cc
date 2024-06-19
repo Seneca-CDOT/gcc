@@ -39,6 +39,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-inline.h"
 #include "intl.h"
 #include "options.h"
+#include "afmv.h"
 
 /* Walker callback that replaces all FUNCTION_DECL of a function that's
    going to be versioned.  */
@@ -325,7 +326,7 @@ expand_target_clones (struct cgraph_node *node, bool definition)
     }
 
   /* Check for afmv collision, and error appropriately. */
-  if (str_afmv_test)
+  if (afmv_cnt)
   {
     error_at (DECL_SOURCE_LOCATION (node->decl), 
     _("AFMV cannot be used together with FMV on function %q+F"), node->decl);

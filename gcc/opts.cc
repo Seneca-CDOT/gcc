@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "version.h"
 #include "selftest.h"
 #include "file-prefix-map.h"
+#include "afmv.h"
 
 /* In this file all option sets are explicit.  */
 #undef OPTION_SET_P
@@ -2745,6 +2746,45 @@ common_handle_option (struct gcc_options *opts,
 
     case OPT__completion_:
       break;
+
+    case OPT_fafmv_:
+      if (!arg) {
+        error_at(loc, "Missing options");
+      } else {
+	unsigned int afmv_cnt = 0;
+        char* afmv_targets[AFMV_MAX_ARRAY_SIZE];
+        const char* supported_list[] = {
+          "simd", "neon", "sve", "sve2"
+        };
+        int list_len = sizeof(supported_list) / sizeof(supported_list[0]);
+        char* features = xstrdup(arg);
+        char* feature = strtok(features, ",");
+        bool is_valid = true;
+        while (feature != NULL && is_valid) {
+          bool is_found = false;
+          for (int i = 0; i < list_len; i++) {
+              if (strcmp(feature, supported_list[i]) == 0){
+                  is_found = true;
+                  break;
+              }
+          }
+          if (!is_found) {
+              error_at(loc, "Unsupported option '%s'", feature);
+              is_valid = false;
+          } else {
+              afmv_targets[afmv_cnt++] = feature;
+          }
+          feature = strtok(NULL, ",");
+        }
+        free(features);
+        if (is_valid) {
+          printf("All option are valid.\n");
+	  afmv_cnt--; // default count is set to 0
+        } else {
+          break;
+        }
+     }
+     break;
 
     case OPT_fsanitize_:
       opts_set->x_flag_sanitize = true;

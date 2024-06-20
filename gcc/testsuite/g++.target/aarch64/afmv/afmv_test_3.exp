@@ -7,8 +7,8 @@ set srcdir [file dirname [info script]]
 # Define the test
 dg-init
 
-set testname "afmv_test_2"
-set srcfile "${srcdir}/afmv_test_2.c"
+set testname "afmv_test_3"
+set srcfile "${srcdir}/afmv_test_3.c"
 
 dg-runtest $srcfile "-O2 -fdump-tree-all" ""
 

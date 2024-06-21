@@ -23,6 +23,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "diagnostic-core.h"
 #include "toplev.h"
+#include "tests.h"
 
 int main (int argc, char **argv);
 
@@ -40,6 +41,6 @@ main (int argc, char **argv)
 
   if (flag_checking && !seen_error ())
     toplev.finalize ();
-
+    test_prune_cloned_functions(); // Call for the prune test
   return r;
 }

@@ -3228,38 +3228,3 @@ function_called_by_processed_nodes_p (void)
     }
   return e != NULL;
 }
-
-// Declaration of the prune function
-extern void prune_cloned_functions(const char* prune_list[]);
-
-namespace {
-
-// Define a new pass for function pruning
-const pass_data pass_data_prune_cloned_functions = {
-    GIMPLE_PASS,              // Pass type
-    "prune_cloned_functions", // Name of the pass
-    OPTGROUP_NONE,            // Optimization group
-    TV_NONE,                  // Timevar
-    PROP_gimple_any,          // Properties required
-    0,                        // Properties provided
-    0,                        // Properties destroyed
-    0,                        // Flags
-    0                         // Function transformation?
-};
-
-// Implementation of the pass
-class pass_prune_cloned_functions : public gimple_opt_pass {
-public:
-    pass_prune_cloned_functions(gcc::context *ctxt, const char* prune_list[])
-        : gimple_opt_pass(pass_data_prune_cloned_functions, ctxt), prune_list(prune_list) {}
-
-    /* opt_pass methods: */
-    unsigned int execute(function *) final override {
-        prune_cloned_functions(prune_list);
-        return 0;
-    }
-
-private:
-    const char** prune_list; // Store the dynamic prune list
-};
-} // End of anonymous namespace

@@ -6955,8 +6955,4 @@ extern tree get_attr_nonstring_decl (tree, tree * = NULL);
 
 extern int get_target_clone_attr_len (tree);
 
-/* Perform function pruning for AFMV created clones by receving a list of function names, 
-   functions that do not provide benefit or are identical will be removed */
-extern void prune_cloned_functions(const char* prune_list[]);
-
 #endif  /* GCC_TREE_H  */

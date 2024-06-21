@@ -41,6 +41,6 @@ main (int argc, char **argv)
 
   if (flag_checking && !seen_error ())
     toplev.finalize ();
-    test_prune_cloned_functions(); // Call for the prune test
+  test_prune_cloned_functions(); // Call for the prune test
   return r;
 }

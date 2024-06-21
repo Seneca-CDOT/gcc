@@ -1,0 +1,15 @@
+# Load the DejaGnu framework
+load_lib gcc-dg.exp
+
+# Set the source directory
+set srcdir [file dirname [info script]]
+
+# Define the test
+dg-init
+
+set testname "afmv_test_2"
+set srcfile "${srcdir}/afmv_test_2.c"
+
+dg-runtest $srcfile "-O2 -fdump-tree-all" ""
+
+dg-finish

@@ -565,12 +565,6 @@ uninitialized value of the type if pragma Initialize_Scalars is used,
 including the ability to modify the value with the binder -Sxx flag and
 relevant environment variables at run time.
 
-Attribute Iterable
-==================
-.. index:: Iterable
-
-Equivalent to Aspect Iterable.
-
 Attribute Large
 ===============
 .. index:: Ada 83 attributes
@@ -1239,7 +1233,7 @@ The ``Super`` attribute can be applied to objects of tagged types in order
 to obtain a view conversion to the most immediate specific parent type.
 
 It cannot be applied to objects of types without any ancestors, or types whose
-immediate parent is abstract.
+immediate parent is an interface type.
 
 .. code-block:: ada
 

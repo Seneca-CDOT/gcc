@@ -1320,7 +1320,7 @@ AC_SUBST(HAVE_PYTHON)
 # NM
 if test x${build} = x${host} && test -f $srcdir/../binutils/nm.c \
   && test -d ../binutils ; then
-  NM='${objdir}/../binutils/nm-new'
+  NM='../binutils/nm-new'
 else
   AC_CHECK_PROG(NM, nm, nm, ${CONFIG_SHELL-/bin/sh} ${srcdir}/../missing nm)
 fi
@@ -1328,7 +1328,7 @@ fi
 # AR
 if test x${build} = x${host} && test -f $srcdir/../binutils/ar.c \
   && test -d ../binutils ; then
-  AR='${objdir}/../binutils/ar'
+  AR='../binutils/ar'
 else
   AC_CHECK_PROG(AR, ar, ar, ${CONFIG_SHELL-/bin/sh} ${srcdir}/../missing ar)
 fi
@@ -3108,8 +3108,8 @@ AC_DEFINE_UNQUOTED(HAVE_GNU_INDIRECT_FUNCTION, $gif,
 
 
 changequote(,)dnl
+ld_ver=`$gcc_cv_ld --version 2>/dev/null | sed 1q`
 if test $in_tree_ld != yes ; then
-  ld_ver=`$gcc_cv_ld --version 2>/dev/null | sed 1q`
   if echo "$ld_ver" | grep GNU > /dev/null; then
     if test x"$ld_is_gold" = xyes; then
       # GNU gold --version looks like this:
@@ -5317,7 +5317,7 @@ x:
 
     AC_MSG_CHECKING(assembler and linker for explicit JALR relocation)
     gcc_cv_as_ld_jalr_reloc=no
-    if test $gcc_cv_as_mips_explicit_relocs = yes; then
+    if test "x$gcc_cv_as_mips_explicit_relocs" = "xyes"; then
       if test $in_tree_ld = yes ; then
         if test "$gcc_cv_gld_major_version" -eq 2 -a "$gcc_cv_gld_minor_version" -ge 20 -o "$gcc_cv_gld_major_version" -gt 2 \
            && test $in_tree_ld_is_elf = yes; then
@@ -5452,6 +5452,11 @@ configured with --enable-newlib-nano-formatted-io.])
       [-march=rv32i_zifencei2p0],,,
       [AC_DEFINE(HAVE_AS_MARCH_ZIFENCEI, 1,
 		 [Define if the assembler understands -march=rv*_zifencei.])])
+    gcc_GAS_CHECK_FEATURE([-march=rv32i_zaamo_zalrsc support],
+      gcc_cv_as_riscv_march_zaamo_zalrsc,
+      [-march=rv32i_zaamo_zalrsc],,,
+      [AC_DEFINE(HAVE_AS_MARCH_ZAAMO_ZALRSC, 1,
+		 [Define if the assembler understands -march=rv*_zaamo_zalrsc.])])
     ;;
     loongarch*-*-*)
     gcc_GAS_CHECK_FEATURE([.dtprelword support],

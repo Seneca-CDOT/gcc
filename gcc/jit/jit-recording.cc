@@ -19,6 +19,7 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 #include "config.h"
+#define INCLUDE_SSTREAM
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
@@ -29,7 +30,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "jit-builtins.h"
 #include "jit-recording.h"
 #include "jit-playback.h"
-#include <sstream>
 
 namespace gcc {
 namespace jit {
@@ -4410,7 +4410,7 @@ recording::function::dump_to_dot (const char *path)
     return;
 
   pretty_printer the_pp;
-  the_pp.buffer->stream = fp;
+  the_pp.set_output_stream (fp);
 
   pretty_printer *pp = &the_pp;
 

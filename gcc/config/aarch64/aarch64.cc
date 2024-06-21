@@ -3288,7 +3288,7 @@ aarch64_sve_reinterpret (machine_mode mode, rtx x)
   /* can_change_mode_class must only return true if subregs and svreinterprets
      have the same semantics.  */
   if (targetm.can_change_mode_class (GET_MODE (x), mode, FP_REGS))
-    return lowpart_subreg (mode, x, GET_MODE (x));
+    return force_lowpart_subreg (mode, x, GET_MODE (x));
 
   rtx res = gen_reg_rtx (mode);
   x = force_reg (GET_MODE (x), x);
@@ -14690,6 +14690,7 @@ cost_plus:
 	return true;
       }
 
+    case BITREVERSE:
     case BSWAP:
       *cost = COSTS_N_INSNS (1);
 
@@ -15336,14 +15337,6 @@ cost_plus:
         {
           if (speed)
             *cost += extra_cost->fp[mode == DFmode].roundint;
-
-          return false;
-        }
-
-      if (XINT (x, 1) == UNSPEC_RBIT)
-        {
-          if (speed)
-            *cost += extra_cost->alu.rev;
 
           return false;
         }
@@ -19757,28 +19750,43 @@ aarch64_parse_fmv_features (const char *str, aarch64_feature_flags *isa_flags,
 
       int num_features = ARRAY_SIZE (aarch64_fmv_feature_data);
       int i;
-      for (i = 0; i < num_features; i++)
-	{
-	  if (strlen (aarch64_fmv_feature_data[i].name) == len
-	      && strncmp (aarch64_fmv_feature_data[i].name, str, len) == 0)
-	    {
-	      if (isa_flags)
-		*isa_flags |= aarch64_fmv_feature_data[i].opt_flags;
-	      if (feature_mask)
-		{
-		  auto old_feature_mask = *feature_mask;
-		  *feature_mask |= aarch64_fmv_feature_data[i].feature_mask;
-		  if (*feature_mask == old_feature_mask)
-		    {
-		      /* Duplicate feature.  */
-		      if (invalid_extension)
-			*invalid_extension = std::string (str, len);
-		      return AARCH_PARSE_DUPLICATE_FEATURE;
-		    }
-		}
-	      break;
-	    }
-	}
+      if (strstr(str, "arch=") != NULL) {
+        const char *archstr = strchr (str, '=') + 1;
+        if (aarch64_handle_attr_arch(archstr)) {
+          /* aarch64_handle_attr_arch handles the validation for the arch= argument (this method is called when using -march command option)
+          I have not figured out what to do from here and unfortunately its the final day! One thing to note, for some reason this is looping
+          past when it should, which I am not sure why but if you have a printf statement inside this if, you will see it is printed multiple times, so
+          that deserves further investigation */
+        }
+        else {
+          /* When aarch64_handle_attr_arch returns false (on a bad arch= arg), it calls its own errors, so this if may be unnecessary as I believe 
+          those errors will stop exectution. I will keep it here for easier testing and to avoid adding any more errors. */
+        }
+      }
+      else {
+        for (i = 0; i < num_features; i++)
+	      {
+	        if (strlen (aarch64_fmv_feature_data[i].name) == len
+	            && strncmp (aarch64_fmv_feature_data[i].name, str, len) == 0)
+	          {
+	            if (isa_flags)
+		            *isa_flags |= aarch64_fmv_feature_data[i].opt_flags;
+	            if (feature_mask)
+		            {
+		              auto old_feature_mask = *feature_mask;
+		              *feature_mask |= aarch64_fmv_feature_data[i].feature_mask;
+		              if (*feature_mask == old_feature_mask)
+		                {
+		                  /* Duplicate feature.  */
+		                  if (invalid_extension)
+			                  *invalid_extension = std::string (str, len);
+		                    return AARCH_PARSE_DUPLICATE_FEATURE;
+		                  }
+		            }
+	                break;
+	            }
+	        }
+      }
 
       if (i == num_features)
 	{
@@ -26877,22 +26885,14 @@ aarch64_addti_scratch_regs (rtx op1, rtx op2, rtx *low_dest,
 			    rtx *high_in2)
 {
   *low_dest = gen_reg_rtx (DImode);
-  *low_in1 = gen_lowpart (DImode, op1);
-  *low_in2 = simplify_gen_subreg (DImode, op2, TImode,
-				  subreg_lowpart_offset (DImode, TImode));
+  *low_in1 = force_lowpart_subreg (DImode, op1, TImode);
+  *low_in2 = force_lowpart_subreg (DImode, op2, TImode);
   *high_dest = gen_reg_rtx (DImode);
-  *high_in1 = gen_highpart (DImode, op1);
-  *high_in2 = simplify_gen_subreg (DImode, op2, TImode,
-				   subreg_highpart_offset (DImode, TImode));
+  *high_in1 = force_highpart_subreg (DImode, op1, TImode);
+  *high_in2 = force_highpart_subreg (DImode, op2, TImode);
 }
 
 /* Generate DImode scratch registers for 128-bit (TImode) subtraction.
-
-   This function differs from 'arch64_addti_scratch_regs' in that
-   OP1 can be an immediate constant (zero). We must call
-   subreg_highpart_offset with DImode and TImode arguments, otherwise
-   VOIDmode will be used for the const_int which generates an internal
-   error from subreg_size_highpart_offset which does not expect a size of zero.
 
    OP1 represents the TImode destination operand 1
    OP2 represents the TImode destination operand 2
@@ -26911,17 +26911,12 @@ aarch64_subvti_scratch_regs (rtx op1, rtx op2, rtx *low_dest,
 			     rtx *high_in2)
 {
   *low_dest = gen_reg_rtx (DImode);
-  *low_in1 = simplify_gen_subreg (DImode, op1, TImode,
-				  subreg_lowpart_offset (DImode, TImode));
-
-  *low_in2 = simplify_gen_subreg (DImode, op2, TImode,
-				  subreg_lowpart_offset (DImode, TImode));
+  *low_in1 = force_lowpart_subreg (DImode, op1, TImode);
+  *low_in2 = force_lowpart_subreg (DImode, op2, TImode);
   *high_dest = gen_reg_rtx (DImode);
 
-  *high_in1 = simplify_gen_subreg (DImode, op1, TImode,
-				   subreg_highpart_offset (DImode, TImode));
-  *high_in2 = simplify_gen_subreg (DImode, op2, TImode,
-				   subreg_highpart_offset (DImode, TImode));
+  *high_in1 = force_highpart_subreg (DImode, op1, TImode);
+  *high_in2 = force_highpart_subreg (DImode, op2, TImode);
 }
 
 /* Generate RTL for 128-bit (TImode) subtraction with overflow.

@@ -530,13 +530,14 @@ gfc_find_and_cut_at_last_class_ref (gfc_expr *e, bool is_mold,
   return base_expr;
 }
 
-
 /* Reset the vptr to the declared type, e.g. after deallocation.
    Use the variable in CLASS_CONTAINER if available.  Otherwise, recreate
-   one with E.  The generated assignment code is added at the end of BLOCK.  */
+   one with e or derived.  At least one of the two has to be set.  The generated
+   assignment code is added at the end of BLOCK.  */
 
 void
-gfc_reset_vptr (stmtblock_t *block, gfc_expr *e, tree class_container)
+gfc_reset_vptr (stmtblock_t *block, gfc_expr *e, tree class_container,
+		gfc_symbol *derived)
 {
   tree vptr = NULL_TREE;
 
@@ -546,6 +547,7 @@ gfc_reset_vptr (stmtblock_t *block, gfc_expr *e, tree class_container)
   if (vptr == NULL_TREE)
     {
       gfc_se se;
+      gcc_assert (e);
 
       /* Evaluate the expression and obtain the vptr from it.  */
       gfc_init_se (&se, NULL);
@@ -570,7 +572,7 @@ gfc_reset_vptr (stmtblock_t *block, gfc_expr *e, tree class_container)
       tree vtable;
 
       /* Return the vptr to the address of the declared type.  */
-      vtab = gfc_find_derived_vtab (e->ts.u.derived);
+      vtab = gfc_find_derived_vtab (derived ? derived : e->ts.u.derived);
       vtable = vtab->backend_decl;
       if (vtable == NULL_TREE)
 	vtable = gfc_get_symbol_decl (vtab);
@@ -8301,7 +8303,9 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	    }
 
 	  /* Finalize the result, if necessary.  */
-	  attr = CLASS_DATA (expr->value.function.esym->result)->attr;
+	  attr = expr->value.function.esym
+		 ? CLASS_DATA (expr->value.function.esym->result)->attr
+		 : CLASS_DATA (expr)->attr;
 	  if (!((gfc_is_class_array_function (expr)
 		 || gfc_is_alloc_class_scalar_function (expr))
 		&& attr.pointer))
@@ -10085,27 +10089,26 @@ trans_class_vptr_len_assignment (stmtblock_t *block, gfc_expr * le,
   if (re->expr_type != EXPR_VARIABLE && re->expr_type != EXPR_NULL
       && rse->expr != NULL_TREE)
     {
-      if (re->ts.type == BT_CLASS && !GFC_CLASS_TYPE_P (TREE_TYPE (rse->expr)))
-	class_expr = gfc_get_class_from_expr (rse->expr);
+      if (!DECL_P (rse->expr))
+	{
+	  if (re->ts.type == BT_CLASS && !GFC_CLASS_TYPE_P (TREE_TYPE (rse->expr)))
+	    class_expr = gfc_get_class_from_expr (rse->expr);
 
-      if (rse->loop)
-	pre = &rse->loop->pre;
+	  if (rse->loop)
+	    pre = &rse->loop->pre;
+	  else
+	    pre = &rse->pre;
+
+	  if (class_expr != NULL_TREE && UNLIMITED_POLY (re))
+	      tmp = gfc_evaluate_now (TREE_OPERAND (rse->expr, 0), &rse->pre);
+	  else
+	      tmp = gfc_evaluate_now (rse->expr, &rse->pre);
+
+	  rse->expr = tmp;
+	}
       else
 	pre = &rse->pre;
 
-      if (class_expr != NULL_TREE && UNLIMITED_POLY (re))
-	{
-	  tmp = TREE_OPERAND (rse->expr, 0);
-	  tmp = gfc_create_var (TREE_TYPE (tmp), "rhs");
-	  gfc_add_modify (&rse->pre, tmp, TREE_OPERAND (rse->expr, 0));
-	}
-      else
-	{
-	  tmp = gfc_create_var (TREE_TYPE (rse->expr), "rhs");
-	  gfc_add_modify (&rse->pre, tmp, rse->expr);
-	}
-
-      rse->expr = tmp;
       temp_rhs = true;
     }
 

@@ -21571,6 +21571,31 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
     = speed ? ix86_tune_cost : &ix86_size_cost;
   int src_cost;
 
+  /* Handling different vternlog variants.  */
+  if ((GET_MODE_SIZE (mode) == 64
+       ? (TARGET_AVX512F && TARGET_EVEX512)
+       : (TARGET_AVX512VL
+	  || (TARGET_AVX512F && TARGET_EVEX512 && !TARGET_PREFER_AVX256)))
+      && GET_MODE_SIZE (mode) >= 16
+      && outer_code_i == SET
+      && ternlog_operand (x, mode))
+    {
+      rtx args[3];
+
+      args[0] = NULL_RTX;
+      args[1] = NULL_RTX;
+      args[2] = NULL_RTX;
+      int idx = ix86_ternlog_idx (x, args);
+      gcc_assert (idx >= 0);
+
+      *total = cost->sse_op;
+      for (int i = 0; i != 3; i++)
+	if (args[i])
+	  *total += rtx_cost (args[i], GET_MODE (args[i]), UNSPEC, i, speed);
+      return true;
+    }
+
+
   switch (code)
     {
     case SET:
@@ -21912,6 +21937,49 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
 	    }
 	  *total = ix86_vec_cost (mode, cost->sse_op);
 	}
+      else if (TARGET_64BIT
+	       && mode == TImode
+	       && GET_CODE (XEXP (x, 0)) == ASHIFT
+	       && GET_CODE (XEXP (XEXP (x, 0), 0)) == ZERO_EXTEND
+	       && GET_MODE (XEXP (XEXP (XEXP (x, 0), 0), 0)) == DImode
+	       && CONST_INT_P (XEXP (XEXP (x, 0), 1))
+	       && INTVAL (XEXP (XEXP (x, 0), 1)) == 64
+	       && GET_CODE (XEXP (x, 1)) == ZERO_EXTEND
+	       && GET_MODE (XEXP (XEXP (x, 1), 0)) == DImode)
+	{
+	  /* *concatditi3 is cheap.  */
+	  rtx op0 = XEXP (XEXP (XEXP (x, 0), 0), 0);
+	  rtx op1 = XEXP (XEXP (x, 1), 0);
+	  *total = (SUBREG_P (op0) && GET_MODE (SUBREG_REG (op0)) == DFmode)
+		   ? COSTS_N_INSNS (1)    /* movq.  */
+		   : set_src_cost (op0, DImode, speed);
+	  *total += (SUBREG_P (op1) && GET_MODE (SUBREG_REG (op1)) == DFmode)
+		    ? COSTS_N_INSNS (1)    /* movq.  */
+		    : set_src_cost (op1, DImode, speed);
+	  return true;
+	}
+      else if (TARGET_64BIT
+	       && mode == TImode
+	       && GET_CODE (XEXP (x, 0)) == AND
+	       && REG_P (XEXP (XEXP (x, 0), 0))
+	       && CONST_WIDE_INT_P (XEXP (XEXP (x, 0), 1))
+	       && CONST_WIDE_INT_NUNITS (XEXP (XEXP (x, 0), 1)) == 2
+	       && CONST_WIDE_INT_ELT (XEXP (XEXP (x, 0), 1), 0) == -1
+	       && CONST_WIDE_INT_ELT (XEXP (XEXP (x, 0), 1), 1) == 0
+	       && GET_CODE (XEXP (x, 1)) == ASHIFT
+	       && GET_CODE (XEXP (XEXP (x, 1), 0)) == ZERO_EXTEND
+	       && GET_MODE (XEXP (XEXP (XEXP (x, 1), 0), 0)) == DImode
+	       && CONST_INT_P (XEXP (XEXP (x, 1), 1))
+	       && INTVAL (XEXP (XEXP (x, 1), 1)) == 64)
+	{
+	  /* *insvti_highpart is cheap.  */
+	  rtx op = XEXP (XEXP (XEXP (x, 1), 0), 0);
+	  *total = COSTS_N_INSNS (1) + 1;
+	  *total += (SUBREG_P (op) && GET_MODE (SUBREG_REG (op)) == DFmode)
+		    ? COSTS_N_INSNS (1)    /* movq.  */
+		    : set_src_cost (op, DImode, speed);
+	  return true;
+	}
       else if (GET_MODE_SIZE (mode) > UNITS_PER_WORD)
 	*total = cost->add * 2;
       else
@@ -22190,6 +22258,9 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
       else if (XINT (x, 1) == UNSPEC_VTERNLOG)
 	{
 	  *total = cost->sse_op;
+	  *total += rtx_cost (XVECEXP (x, 0, 0), mode, code, 0, speed);
+	  *total += rtx_cost (XVECEXP (x, 0, 1), mode, code, 1, speed);
+	  *total += rtx_cost (XVECEXP (x, 0, 2), mode, code, 2, speed);
 	  return true;
 	}
       else if (XINT (x, 1) == UNSPEC_PTEST)
@@ -22217,12 +22288,21 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
 
     case VEC_SELECT:
     case VEC_CONCAT:
-    case VEC_DUPLICATE:
       /* ??? Assume all of these vector manipulation patterns are
 	 recognizable.  In which case they all pretty much have the
 	 same cost.  */
      *total = cost->sse_op;
      return true;
+    case VEC_DUPLICATE:
+      *total = rtx_cost (XEXP (x, 0),
+			 GET_MODE (XEXP (x, 0)),
+			 VEC_DUPLICATE, 0, speed);
+      /* It's broadcast instruction, not embedded broadcasting.  */
+      if (outer_code == SET)
+	*total += cost->sse_op;
+
+     return true;
+
     case VEC_MERGE:
       mask = XEXP (x, 2);
       /* This is masked instruction, assume the same cost,
@@ -26161,6 +26241,13 @@ ix86_memtag_add_tag (rtx base, poly_int64 offset, unsigned char tag_offset)
   return plus_constant (Pmode, tagged_addr, offset);
 }
 
+/* Implement TARGET_HAVE_CCMP.  */
+static bool
+ix86_have_ccmp ()
+{
+  return (bool) TARGET_APX_CCMP;
+}
+
 /* Target-specific selftests.  */
 
 #if CHECKING_P
@@ -27000,6 +27087,8 @@ ix86_libgcc_floating_mode_supported_p
 #undef TARGET_GEN_CCMP_NEXT
 #define TARGET_GEN_CCMP_NEXT ix86_gen_ccmp_next
 
+#undef TARGET_HAVE_CCMP
+#define TARGET_HAVE_CCMP ix86_have_ccmp
 
 static bool
 ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)

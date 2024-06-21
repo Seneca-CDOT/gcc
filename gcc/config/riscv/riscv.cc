@@ -2720,7 +2720,7 @@ riscv_move_integer (rtx temp, rtx dest, HOST_WIDE_INT value,
   struct riscv_integer_op codes[RISCV_MAX_INTEGER_OPS];
   machine_mode mode;
   int i, num_ops;
-  rtx x;
+  rtx x = NULL_RTX;
 
   mode = GET_MODE (dest);
   /* We use the original mode for the riscv_build_integer call, because HImode
@@ -11610,6 +11610,41 @@ riscv_expand_usadd (rtx dest, rtx x, rtx y)
 
   /* Step-5: dest = xmode_dest */
   emit_move_insn (dest, gen_lowpart (mode, xmode_dest));
+}
+
+/* Implements the unsigned saturation sub standard name usadd for int mode.
+
+   z = SAT_SUB(x, y).
+   =>
+   1. minus = x - y.
+   2. lt = x < y.
+   3. lt = lt - 1.
+   4. z = minus & lt.  */
+
+void
+riscv_expand_ussub (rtx dest, rtx x, rtx y)
+{
+  machine_mode mode = GET_MODE (dest);
+  rtx pmode_x = gen_lowpart (Pmode, x);
+  rtx pmode_y = gen_lowpart (Pmode, y);
+  rtx pmode_lt = gen_reg_rtx (Pmode);
+  rtx pmode_minus = gen_reg_rtx (Pmode);
+  rtx pmode_dest = gen_reg_rtx (Pmode);
+
+  /* Step-1: minus = x - y  */
+  riscv_emit_binary (MINUS, pmode_minus, pmode_x, pmode_y);
+
+  /* Step-2: lt = x < y  */
+  riscv_emit_binary (LTU, pmode_lt, pmode_x, pmode_y);
+
+  /* Step-3: lt = lt - 1 (lt + (-1))  */
+  riscv_emit_binary (PLUS, pmode_lt, pmode_lt, CONSTM1_RTX (Pmode));
+
+  /* Step-4: pmode_dest = minus & lt  */
+  riscv_emit_binary (AND, pmode_dest, pmode_lt, pmode_minus);
+
+  /* Step-5: dest = pmode_dest  */
+  emit_move_insn (dest, gen_lowpart (mode, pmode_dest));
 }
 
 /* Initialize the GCC target structure.  */

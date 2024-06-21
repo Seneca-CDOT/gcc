@@ -134,6 +134,7 @@ extern bool
 riscv_zcmp_valid_stack_adj_bytes_p (HOST_WIDE_INT, int);
 extern void riscv_legitimize_poly_move (machine_mode, rtx, rtx, rtx);
 extern void riscv_expand_usadd (rtx, rtx, rtx);
+extern void riscv_expand_ussub (rtx, rtx, rtx);
 
 #ifdef RTX_CODE
 extern void riscv_expand_int_scc (rtx, enum rtx_code, rtx, rtx, bool *invert_ptr = 0);
@@ -637,6 +638,7 @@ void expand_vec_lround (rtx, rtx, machine_mode, machine_mode, machine_mode);
 void expand_vec_lceil (rtx, rtx, machine_mode, machine_mode);
 void expand_vec_lfloor (rtx, rtx, machine_mode, machine_mode);
 void expand_vec_usadd (rtx, rtx, rtx, machine_mode);
+void expand_vec_ussub (rtx, rtx, rtx, machine_mode);
 #endif
 bool sew64_scalar_helper (rtx *, rtx *, rtx, machine_mode,
 			  bool, void (*)(rtx *, rtx), enum avl_type);

@@ -633,6 +633,10 @@ package Einfo is
 --       the corresponding implicitly declared class-wide type. For a
 --       class-wide type, returns itself. Set to Empty for untagged types.
 
+--    Class_Wide_Equivalent_Type
+--       Defined in all type entities. Used to store an internally generated
+--       class-wide equivalent type for an associated mutably tagged type.
+
 --    Cloned_Subtype
 --       Defined in E_Record_Subtype and E_Class_Wide_Subtype entities.
 --       Each such entity can either have a Discriminant_Constraint, in
@@ -2728,7 +2732,7 @@ package Einfo is
 --       Defined in all entities. Set for implicitly declared subprograms
 --       that require overriding or are null procedures, and are hidden by
 --       a non-fully conformant homograph with the same characteristics
---       (Ada RM 8.3 12.3/2).
+--       (RM 8.3(12.3/2)).
 
 --    Is_Hidden_Open_Scope
 --       Defined in all entities. Set for a scope that contains the
@@ -2979,6 +2983,10 @@ package Einfo is
 
 --    Is_Modular_Integer_Type (synthesized)
 --       Applies to all entities. True if entity is a modular integer type
+
+--    Is_Mutably_Tagged_Type
+--       Defined in all type entities. Used to signify that a given type is a
+--       "mutably tagged" class-wide type where 'Size'Class has been specified.
 
 --    Is_Non_Static_Subtype
 --       Defined in all type and subtype entities. It is set in some (but not

@@ -387,15 +387,16 @@ expand_target_clones (struct cgraph_node *node, bool definition)
   DECL_FUNCTION_VERSIONED (node->decl) = 1;
 
   const int no_of_attr=2;//declaring the number of hardcoded target archietecture we want to pass
-  char attr_array[no_of_attr][5]={"sve-bf16","sve2"};// hard coded targets
+  char attr_array[no_of_attr][5]={"sve","sve2"};// hard coded targets
 
-  for (i = 0; i < attrnum; i++)
+  for (i = 0; i < no_of_attr; i++)
     {
       char *attr = attr_array[i];//changing the array name 
 
       /* Create new target clone.  */
       tree attributes = make_attribute (new_attr_name, attr,
 					DECL_ATTRIBUTES (node->decl));
+
 
       char *suffix = XNEWVEC (char, strlen (attr) + 1);
       create_new_asm_name (attr, suffix);

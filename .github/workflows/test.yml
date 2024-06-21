@@ -13,18 +13,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc g++ dejagnu autoconf automake libtool
-
-    - name: Set up DejaGnu
-      run: |
-        git clone https://git.savannah.gnu.org/git/dejagnu.git
-        cd dejagnu
-        ./bootstrap
-        ./configure
-        make
-        sudo make install
-        cd ..
-        export PATH=$PATH:/usr/local/bin
+        sudo apt-get install -y gcc g++ dejagnu
 
     - name: Run DejaGnu tests
       run: |

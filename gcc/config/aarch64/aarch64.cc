@@ -19750,28 +19750,43 @@ aarch64_parse_fmv_features (const char *str, aarch64_feature_flags *isa_flags,
 
       int num_features = ARRAY_SIZE (aarch64_fmv_feature_data);
       int i;
-      for (i = 0; i < num_features; i++)
-	{
-	  if (strlen (aarch64_fmv_feature_data[i].name) == len
-	      && strncmp (aarch64_fmv_feature_data[i].name, str, len) == 0)
-	    {
-	      if (isa_flags)
-		*isa_flags |= aarch64_fmv_feature_data[i].opt_flags;
-	      if (feature_mask)
-		{
-		  auto old_feature_mask = *feature_mask;
-		  *feature_mask |= aarch64_fmv_feature_data[i].feature_mask;
-		  if (*feature_mask == old_feature_mask)
-		    {
-		      /* Duplicate feature.  */
-		      if (invalid_extension)
-			*invalid_extension = std::string (str, len);
-		      return AARCH_PARSE_DUPLICATE_FEATURE;
-		    }
-		}
-	      break;
-	    }
-	}
+      if (strstr(str, "arch=") != NULL) {
+        const char *archstr = strchr (str, '=') + 1;
+        if (aarch64_handle_attr_arch(archstr)) {
+          /* aarch64_handle_attr_arch handles the validation for the arch= argument (this method is called when using -march command option)
+          I have not figured out what to do from here and unfortunately its the final day! One thing to note, for some reason this is looping
+          past when it should, which I am not sure why but if you have a printf statement inside this if, you will see it is printed multiple times, so
+          that deserves further investigation */
+        }
+        else {
+          /* When aarch64_handle_attr_arch returns false (on a bad arch= arg), it calls its own errors, so this if may be unnecessary as I believe 
+          those errors will stop exectution. I will keep it here for easier testing and to avoid adding any more errors. */
+        }
+      }
+      else {
+        for (i = 0; i < num_features; i++)
+	      {
+	        if (strlen (aarch64_fmv_feature_data[i].name) == len
+	            && strncmp (aarch64_fmv_feature_data[i].name, str, len) == 0)
+	          {
+	            if (isa_flags)
+		            *isa_flags |= aarch64_fmv_feature_data[i].opt_flags;
+	            if (feature_mask)
+		            {
+		              auto old_feature_mask = *feature_mask;
+		              *feature_mask |= aarch64_fmv_feature_data[i].feature_mask;
+		              if (*feature_mask == old_feature_mask)
+		                {
+		                  /* Duplicate feature.  */
+		                  if (invalid_extension)
+			                  *invalid_extension = std::string (str, len);
+		                    return AARCH_PARSE_DUPLICATE_FEATURE;
+		                  }
+		            }
+	                break;
+	            }
+	        }
+      }
 
       if (i == num_features)
 	{

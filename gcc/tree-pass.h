@@ -659,6 +659,7 @@ extern gimple_opt_pass *make_pass_update_address_taken (gcc::context *ctxt);
 extern gimple_opt_pass *make_pass_convert_switch (gcc::context *ctxt);
 extern gimple_opt_pass *make_pass_lower_vaarg (gcc::context *ctxt);
 extern gimple_opt_pass *make_pass_gimple_isel (gcc::context *ctxt);
+extern gimple_opt_pass *make_pass_gimple_diagnostic_test (gcc::context *ctxt);
 extern gimple_opt_pass *make_pass_harden_compares (gcc::context *ctxt);
 extern gimple_opt_pass *make_pass_harden_conditional_branches (gcc::context
 							       *ctxt);
@@ -692,6 +693,6 @@ extern void do_per_function_toporder (void (*) (function *, void *), void *);
 
 extern void disable_pass (const char *);
 extern void enable_pass (const char *);
-extern void dump_passes (void);
+//extern void dump_passes (void);
 
 #endif /* GCC_TREE_PASS_H */

@@ -1109,6 +1109,10 @@ package Opt is
    --  This flag is set True if a No_Run_Time pragma is encountered. See spec
    --  of Rtsfind for a full description of handling of this pragma.
 
+   Interrupts_System_By_Default : Boolean := False;
+   --  GNATBIND
+   --  Set True if pragma Interrupts_System_By_Default is seen.
+
    No_Split_Units : Boolean := False;
    --  GPRBUILD
    --  Set to True with switch --no-split-units. When True, unit sources, spec,
@@ -1666,6 +1670,11 @@ package Opt is
    --  ignored (except for legality checks), unless we are in GNATprove_Mode,
    --  which requires pragma Warnings to be stored for the formal verification
    --  backend.
+
+   Info_Suppressed : Boolean := False;
+   --  GNAT
+   --  Controls whether informational messages are suppressed. Set True by
+   --  -gnatis. If True, informational messages will not be printed.
 
    Wide_Character_Encoding_Method : WC_Encoding_Method := WCEM_Brackets;
    --  GNAT, GNATBIND

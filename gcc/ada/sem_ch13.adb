@@ -508,7 +508,7 @@ package body Sem_Ch13 is
 
                      if Warn_On_Reverse_Bit_Order then
                         Error_Msg_N
-                          ("info: multi-byte field specified with "
+                          ("multi-byte field specified with "
                            & "non-standard Bit_Order?.v?", CC);
 
                         if Bytes_Big_Endian then
@@ -732,7 +732,7 @@ package body Sem_Ch13 is
                   then
                      Error_Msg_Uint_1 := MSS;
                      Error_Msg_N
-                       ("info: reverse bit order in machine scalar of "
+                       ("reverse bit order in machine scalar of "
                         & "length^?.v?", First_Bit (CC));
                      Error_Msg_Uint_1 := NFB;
                      Error_Msg_Uint_2 := NLB;
@@ -808,7 +808,7 @@ package body Sem_Ch13 is
                     and then CSZ mod System_Storage_Unit = 0
                   then
                      Error_Msg_N
-                       ("info: multi-byte field specified with non-standard "
+                       ("multi-byte field specified with non-standard "
                         & "Bit_Order?.v?", CLC);
 
                      if Bytes_Big_Endian then
@@ -841,13 +841,13 @@ package body Sem_Ch13 is
                     and then Warn_On_Reverse_Bit_Order
                   then
                      Error_Msg_N
-                       ("info: Bit_Order clause does not affect byte "
+                       ("Bit_Order clause does not affect byte "
                         & "ordering?.v?", Pos);
                      Error_Msg_Uint_1 :=
                        Intval (Pos) + Intval (FB) /
                        System_Storage_Unit;
                      Error_Msg_N
-                       ("info: position normalized to ^ before bit order "
+                       ("position normalized to ^ before bit order "
                         & "interpreted?.v?", Pos);
                   end if;
 
@@ -1037,11 +1037,19 @@ package body Sem_Ch13 is
 
          Parent_Type : Entity_Id;
 
+         Save_In_Spec_Expression : constant Boolean := In_Spec_Expression;
+
       begin
          --  Ensure Expr is analyzed so that e.g. all types are properly
-         --  resolved for Find_Type_Reference.
+         --  resolved for Find_Type_Reference. We preanalyze this expression
+         --  as a spec expression (to avoid recursive freezing), while skipping
+         --  resolution (to not fold type self-references, e.g. T'Last).
 
-         Analyze (Expr);
+         In_Spec_Expression := True;
+
+         Preanalyze (Expr);
+
+         In_Spec_Expression := Save_In_Spec_Expression;
 
          --  A self-referential aspect is illegal if it forces freezing the
          --  entity before the corresponding aspect has been analyzed.
@@ -1449,7 +1457,6 @@ package body Sem_Ch13 is
       --    Global
       --    Initial_Condition
       --    Initializes
-      --    Max_Entry_Queue_Depth
       --    Max_Entry_Queue_Length
       --    Max_Queue_Length
       --    No_Caching
@@ -3759,19 +3766,6 @@ package body Sem_Ch13 is
                   goto Continue;
                end Initializes;
 
-               --  Max_Entry_Queue_Depth
-
-               when Aspect_Max_Entry_Queue_Depth =>
-                  Aitem := Make_Aitem_Pragma
-                    (Pragma_Argument_Associations => New_List (
-                       Make_Pragma_Argument_Association (Loc,
-                         Expression => Relocate_Node (Expr))),
-                     Pragma_Name => Name_Max_Entry_Queue_Depth);
-
-                  Decorate (Aspect, Aitem);
-                  Insert_Pragma (Aitem);
-                  goto Continue;
-
                --  Max_Entry_Queue_Length
 
                when Aspect_Max_Entry_Queue_Length =>
@@ -4100,12 +4094,12 @@ package body Sem_Ch13 is
                      Error_Msg_N ("aspect% cannot apply to subtype", Id);
                      goto Continue;
 
-                  elsif A_Id = Aspect_Default_Value
-                    and then not Is_Scalar_Type (E)
-                  then
-                     Error_Msg_N
-                       ("aspect% can only be applied to scalar type", Id);
-                     goto Continue;
+                  elsif A_Id = Aspect_Default_Value then
+                     if not Is_Scalar_Type (E) then
+                        Error_Msg_N
+                          ("aspect% can only be applied to scalar type", Id);
+                        goto Continue;
+                     end if;
 
                   elsif A_Id = Aspect_Default_Component_Value then
                      if not Is_Array_Type (E) then
@@ -4807,8 +4801,14 @@ package body Sem_Ch13 is
               and then Nkind (Type_Definition (N)) = N_Derived_Type_Definition
               and then not In_Instance_Body
             then
+               --  In order to locate the parent type we must go first to its
+               --  base type because the frontend introduces an implicit base
+               --  type even if there is no constraint attached to it, since
+               --  this is closer to the Ada semantics.
+
                declare
-                  Parent_Type      : constant Entity_Id := Etype (E);
+                  Parent_Type      : constant Entity_Id :=
+                    Etype (Base_Type (E));
                   Inherited_Aspect : constant Node_Id :=
                     Find_Aspect (Parent_Type, A_Id);
                begin
@@ -11017,10 +11017,10 @@ package body Sem_Ch13 is
       --  Expression to be analyzed at end of declarations
 
       Freeze_Expr : constant Node_Id := Expression (ASN);
-      --  Expression from call to Check_Aspect_At_Freeze_Point.
+      --  Expression from call to Check_Aspect_At_Freeze_Point
 
       T : constant Entity_Id :=
-            (if Present (Freeze_Expr) and A_Id /= Aspect_Stable_Properties
+            (if Present (Freeze_Expr) and then A_Id /= Aspect_Stable_Properties
              then Etype (Original_Node (Freeze_Expr))
              else Empty);
       --  Type required for preanalyze call. We use the original expression to
@@ -11087,7 +11087,7 @@ package body Sem_Ch13 is
       if In_Instance then
          return;
 
-      --  The enclosing scope may have been rewritten during expansion (.e.g. a
+      --  The enclosing scope may have been rewritten during expansion (e.g. a
       --  task body is rewritten as a procedure) after this conformance check
       --  has been performed, so do not perform it again (it may not easily be
       --  done if full visibility of local entities is not available).
@@ -11132,7 +11132,7 @@ package body Sem_Ch13 is
          --  If the end of declarations comes before any other freeze point,
          --  the Freeze_Expr is not analyzed: no check needed.
 
-         if Analyzed (Freeze_Expr) and then not In_Instance then
+         if Analyzed (Freeze_Expr) then
             Check_Overloaded_Name;
          else
             Err := False;
@@ -11551,7 +11551,6 @@ package body Sem_Ch13 is
             | Aspect_Implicit_Dereference
             | Aspect_Initial_Condition
             | Aspect_Initializes
-            | Aspect_Max_Entry_Queue_Depth
             | Aspect_Max_Entry_Queue_Length
             | Aspect_Max_Queue_Length
             | Aspect_Obsolescent
@@ -14110,13 +14109,6 @@ package body Sem_Ch13 is
               and then Is_Pragma_Or_Corr_Pragma_Present_In_Rep_Item (Rep)
             then
                Set_Has_Volatile_Components (Imp_Bas_Typ);
-            end if;
-
-            --  Finalize_Storage_Only
-
-            Rep := Get_Inherited_Rep_Item (Typ, Name_Finalize_Storage_Only);
-            if Present (Rep) then
-               Set_Finalize_Storage_Only (Bas_Typ);
             end if;
 
             --  Universal_Aliasing

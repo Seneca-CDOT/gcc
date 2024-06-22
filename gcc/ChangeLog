@@ -1,3 +1,395 @@
+2024-06-21  David Malcolm  <dmalcolm@redhat.com>
+
+	* diagnostic-format-json.cc
+	(json_output_format::on_end_diagnostic): Use
+	get_diagnostic_kind_text rather than embedding a duplicate copy of
+	the table.
+	* diagnostic-format-sarif.cc
+	(make_rule_id_for_diagnostic_kind): Likewise.
+	* diagnostic.cc (get_diagnostic_kind_text): New.
+	* diagnostic.h (get_diagnostic_kind_text): New decl.
+
+2024-06-21  David Malcolm  <dmalcolm@redhat.com>
+
+	* diagnostic-path.cc (diagnostic_event::meaning::dump_to_pp): Move
+	here from diagnostic.cc.
+	(diagnostic_event::meaning::maybe_get_verb_str): Likewise.
+	(diagnostic_event::meaning::maybe_get_noun_str): Likewise.
+	(diagnostic_event::meaning::maybe_get_property_str): Likewise.
+	(diagnostic_path::get_first_event_in_a_function): Likewise.
+	(diagnostic_path::interprocedural_p): Likewise.
+	(debug): Likewise for diagnostic_path * overload.
+	* diagnostic.cc (diagnostic_event::meaning::dump_to_pp): Move from
+	here to diagnostic-path.cc.
+	(diagnostic_event::meaning::maybe_get_verb_str): Likewise.
+	(diagnostic_event::meaning::maybe_get_noun_str): Likewise.
+	(diagnostic_event::meaning::maybe_get_property_str): Likewise.
+	(diagnostic_path::get_first_event_in_a_function): Likewise.
+	(diagnostic_path::interprocedural_p): Likewise.
+	(debug): Likewise for diagnostic_path * overload.
+
+2024-06-21  Jeff Law  <jlaw@ventanamicro.com>
+
+	* config/stormy16/stormy16.md (swpn_zext): New pattern.
+
+2024-06-21  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* config/stormy16/predicates.md (xs_hi_nonmemory_operand): Handle
+	symbol_ref and label_ref.
+
+2024-06-21  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* config/iq2000/iq2000.cc (iq2000_print_operand): Make %p handle 1<<31.
+	* config/iq2000/iq2000.md: Remove "I" constraints on
+	power_of_2_operands.
+
+2024-06-21  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* rtl-ssa/changes.cc (rtl_ssa::changes_are_worthwhile): Don't
+	cost no-op moves.
+	* rtl-ssa/insns.cc (insn_info::calculate_cost): Likewise.
+
+2024-06-21  Andrew MacLeod  <amacleod@redhat.com>
+
+	* gimple-range.cc (gimple_ranger::register_inferred_ranges): Do not
+	dump global range info after set_range_info.
+	(gimple_ranger::register_transitive_inferred_ranges): Likewise.
+	(dom_ranger::range_of_stmt): Likewise.
+	* tree-ssanames.cc (set_range_info): If global range info
+	changes, maybe print new range to dump_file.
+	* tree-vrp.cc (remove_unreachable::handle_early): Do not
+	dump global range info after set_range_info.
+	(remove_unreachable::remove): Likewise.
+	(remove_unreachable::remove_and_update_globals): Likewise.
+	(pass_assumptions::execute): Likewise.
+
+2024-06-21  Andrew MacLeod  <amacleod@redhat.com>
+
+	* gimple-range.cc (dom_ranger::dom_ranger): Create a block
+	vector.
+	(dom_ranger::~dom_ranger): Dispose of the block vector.
+	(dom_ranger::edge_range): Delete.
+	(dom_ranger::range_on_edge): Combine range in src BB with any
+	range gori_nme_on_edge returns.
+	(dom_ranger::range_in_bb): Combine global range with any active
+	contextual range for an ssa-name.
+	(dom_ranger::range_of_stmt): Fix non-ssa LHS case, use
+	fur_depend for folding so relations can be registered.
+	(dom_ranger::maybe_push_edge): Delete.
+	(dom_ranger::pre_bb): Create incoming contextual range vector.
+	(dom_ranger::post_bb): Free contextual range vector.
+	* gimple-range.h (dom_ranger::edge_range): Delete.
+	(dom_ranger::m_e0): Delete.
+	(dom_ranger::m_e1): Delete.
+	(dom_ranger::m_bb): New.
+	(dom_ranger::m_pop_list): Delete.
+	* tree-vrp.cc (execute_fast_vrp): Enable relation oracle.
+
+2024-06-21  Andrew MacLeod  <amacleod@redhat.com>
+
+	* tree-vrp.cc (remove_unreachable::remove): Export global range
+	if builtin_unreachable dominates all uses.
+	(remove_unreachable::remove_and_update_globals): Do not reset SCEV.
+	(execute_ranger_vrp): Reset SCEV here instead.
+	(fvrp_folder::fvrp_folder): Take final pass flag
+	and create a remove_unreachable object when specified.
+	(fvrp_folder::pre_fold_stmt): Register GIMPLE_CONDs with
+	the remove_unreachcable object.
+	(fvrp_folder::m_unreachable): New.
+	(execute_fast_vrp): Process remove_unreachable object.
+	(pass_vrp::execute): Add final_p flag to execute_fast_vrp.
+
+2024-06-21  David Malcolm  <dmalcolm@redhat.com>
+
+	PR testsuite/109360
+	* doc/install.texi: Mention optional usage of "jsonschema" tool.
+
+2024-06-21  David Malcolm  <dmalcolm@redhat.com>
+
+	PR testsuite/109360
+	* diagnostic-format-sarif.cc
+	(sarif_builder::make_location_object): Pass any column override
+	from rich_loc to maybe_make_physical_location_object.
+	(sarif_builder::maybe_make_physical_location_object): Add
+	"column_override" param and pass it to maybe_make_region_object.
+	(sarif_builder::maybe_make_region_object): Add "column_override"
+	param and use it when the location has 0 for a column.  Don't
+	add "startLine", "startColumn", "endLine", or "endColumn" if
+	the values aren't positive.
+	(sarif_builder::maybe_make_region_object_for_context): Don't
+	add "startLine" or "endLine" if the values aren't positive.
+
+2024-06-21  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* config/sh/sh.md (*minus_plus_one): Add constraints.
+
+2024-06-21  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	PR tree-optimization/68855
+	* tree-complex.cc (init_dont_simulate_again): Handle PAREN_EXPR
+	like NEGATE_EXPR.
+	(complex_propagate::visit_stmt): Likewise.
+	(expand_complex_move): Don't handle PAREN_EXPR.
+	(expand_complex_paren): New function.
+	(expand_complex_operations_1): Handle PAREN_EXPR like
+	NEGATE_EXPR. And call expand_complex_paren for PAREN_EXPR.
+
+2024-06-21  Richard Biener  <rguenther@suse.de>
+
+	* doc/passes.texi: Remove references to no longer existing
+	passes.
+
+2024-06-21  YunQiang Su  <syq@gcc.gnu.org>
+
+	* configure.ac: Set gcc_cv_as_mips_explicit_relocs if
+	gcc_cv_as_mips_explicit_relocs_pcrel.
+	* configure: Regenerate.
+
+2024-06-21  YunQiang Su  <syq@gcc.gnu.org>
+
+	* config/mips/mips.cc(mips_rtx_costs): Set condmove cost.
+	* config/mips/mips.md(mov<GPR:mode>_on_<MOVECC:mode>,
+	mov<GPR:mode>_on_<MOVECC:mode>_mips16e2,
+	mov<GPR:mode>_on_<GPR2:mode>_ne
+	mov<GPR:mode>_on_<GPR2:mode>_ne_mips16e2): Define name by
+	remove starting *, so that we can use CODE_FOR_.
+
+2024-06-21  Kewen Lin  <linkw@linux.ibm.com>
+	    Xionghu Luo  <xionghuluo@tencent.com>
+
+	PR target/106069
+	PR target/115355
+	* config/rs6000/altivec.md (altivec_vmrghw_direct_<VSX_W:mode>): Rename
+	to ...
+	(altivec_vmrghw_direct_<VSX_W:mode>_be): ... this.  Add the condition
+	BYTES_BIG_ENDIAN.
+	(altivec_vmrghw_direct_<VSX_W:mode>_le): New define_insn.
+	(altivec_vmrglw_direct_<VSX_W:mode>): Rename to ...
+	(altivec_vmrglw_direct_<VSX_W:mode>_be): ... this.  Add the condition
+	BYTES_BIG_ENDIAN.
+	(altivec_vmrglw_direct_<VSX_W:mode>_le): New define_insn.
+	(altivec_vmrghw): Adjust by calling gen_altivec_vmrghw_direct_v4si_be
+	for BE and gen_altivec_vmrglw_direct_v4si_le for LE.
+	(altivec_vmrglw): Adjust by calling gen_altivec_vmrglw_direct_v4si_be
+	for BE and gen_altivec_vmrghw_direct_v4si_le for LE.
+	(vec_widen_umult_hi_v8hi): Adjust the call to
+	gen_altivec_vmrghw_direct_v4si by gen_altivec_vmrghw for BE
+	and by gen_altivec_vmrglw for LE.
+	(vec_widen_smult_hi_v8hi): Likewise.
+	(vec_widen_umult_lo_v8hi): Adjust the call to
+	gen_altivec_vmrglw_direct_v4si by gen_altivec_vmrglw for BE
+	and by gen_altivec_vmrghw for LE
+	(vec_widen_smult_lo_v8hi): Likewise.
+	* config/rs6000/rs6000.cc (altivec_expand_vec_perm_const): Replace
+	CODE_FOR_altivec_vmrghw_direct_v4si by
+	CODE_FOR_altivec_vmrghw_direct_v4si_be for BE and
+	CODE_FOR_altivec_vmrghw_direct_v4si_le for LE.  And replace
+	CODE_FOR_altivec_vmrglw_direct_v4si by
+	CODE_FOR_altivec_vmrglw_direct_v4si_be for BE and
+	CODE_FOR_altivec_vmrglw_direct_v4si_le for LE.
+	* config/rs6000/vsx.md (vsx_xxmrghw_<VSX_W:mode>): Adjust by calling
+	gen_altivec_vmrghw_direct_v4si_be for BE and
+	gen_altivec_vmrglw_direct_v4si_le for LE.
+	(vsx_xxmrglw_<VSX_W:mode>): Adjust by calling
+	gen_altivec_vmrglw_direct_v4si_be for BE and
+	gen_altivec_vmrghw_direct_v4si_le for LE.
+
+2024-06-20  Roger Sayle  <roger@nextmovesoftware.com>
+
+	* config/i386/i386-expand.cc (ix86_ternlog_idx): Allow any SUBREG
+	that matches register_operand.  Use rtx_equal_p to compare REG
+	or SUBREG "leaf" operands.
+
+2024-06-20  Jeff Law  <jlaw@ventanamicro.com>
+
+	* config/riscv/bitmanip.md (<bit_optab><mode>): New unified
+	pattern for bset/binv using a code iterator.
+	(<bit_optab>i<mode>): Likewise.
+	(<bit_optab><mode>_mask): Likewise.  Support XOR via any_or.
+	(<bit_optab>isidi): Likewise.
+	* config/riscv/iterators.md (bit_optab): New iterator.
+
+2024-06-20  Hongyu Wang  <hongyu.wang@intel.com>
+
+	* config/i386/i386-options.cc (ix86_option_override_internal):
+	Use TARGET_*_P (opts->x_ix86_isa_flags*) instead of TARGET_*
+	for UINTR, LAM and APX_F.
+
+2024-06-20  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/114413
+	* tree-vect-slp.cc (release_scalar_stmts_to_slp_tree_map):
+	New function, split out from ...
+	(vect_analyze_slp): ... here.  Call it.
+	(vect_cse_slp_nodes): New function.
+	(vect_optimize_slp): Call it.
+
+2024-06-20  Feng Xue  <fxue@os.amperecomputing.com>
+
+	* tree-vect-loop.cc (vect_transform_reduction): Change assertion to
+	cover all lane-reducing ops.
+
+2024-06-20  Feng Xue  <fxue@os.amperecomputing.com>
+
+	* tree-vect-loop.cc (vect_transform_reduction): Replace vec_oprnds0/1/2
+	with one new array variable vec_oprnds[3].
+
+2024-06-20  Feng Xue  <fxue@os.amperecomputing.com>
+
+	* tree-vect-loop.cc (vectorizable_reduction): Remove v_reduc_type, and
+	replace it to another local variable reduction_type.
+
+2024-06-20  Feng Xue  <fxue@os.amperecomputing.com>
+
+	* tree-vect-loop.cc (vectorizable_reduction): Remove the duplicated
+	check.
+
+2024-06-20  Feng Xue  <fxue@os.amperecomputing.com>
+
+	* tree-vectorizer.h (lane_reducing_stmt_p): New function.
+	* tree-vect-slp.cc (vect_analyze_slp): Use new function
+	lane_reducing_stmt_p to check statement.
+
+2024-06-19  YunQiang Su  <syq@gcc.gnu.org>
+
+	Revert:
+	2024-06-19  Collin Funk  <collin.funk1@gmail.com>
+
+	* configure.ac: Add missing quotation of variable
+	gcc_cv_as_mips_explicit_relocs.
+	* configure: Regenerate.
+
+2024-06-19  demin.han  <demin.han@starfivetech.com>
+
+	* config/riscv/riscv-vector-builtins-bases.cc: Remove eqne cond
+	* config/riscv/vector.md (@pred_eqne<mode>_scalar): Remove patterns
+	(*pred_eqne<mode>_scalar_merge_tie_mask): Ditto
+	(*pred_eqne<mode>_scalar): Ditto
+	(*pred_eqne<mode>_scalar_narrow): Ditto
+
+2024-06-19  Patrick O'Neill  <patrick@rivosinc.com>
+
+	* common/config/riscv/riscv-common.cc: Add 'a' extension to
+	riscv_combine_info.
+
+2024-06-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR tree-optimization/115544
+	* gimple-lower-bitint.cc (gimple_lower_bitint): Disable optimizing
+	loads used by COMPLEX_EXPR operands.
+
+2024-06-19  mayshao  <mayshao-oc@zhaoxin.com>
+
+	* common/config/i386/cpuinfo.h (get_zhaoxin_cpu): Recognize shijidadao.
+	* common/config/i386/i386-common.cc: Add shijidadao.
+	* common/config/i386/i386-cpuinfo.h (enum processor_subtypes):
+	Add ZHAOXIN_FAM7H_SHIJIDADAO.
+	* config.gcc: Add shijidadao.
+	* config/i386/driver-i386.cc (host_detect_local_cpu):
+	Let -march=native recognize shijidadao processors.
+	* config/i386/i386-c.cc (ix86_target_macros_internal): Add shijidadao.
+	* config/i386/i386-options.cc (m_ZHAOXIN): Add m_SHIJIDADAO.
+	(m_SHIJIDADAO): New definition.
+	* config/i386/i386.h (enum processor_type): Add PROCESSOR_SHIJIDADAO.
+	* config/i386/x86-tune-costs.h (struct processor_costs):
+	Add shijidadao_cost.
+	* config/i386/x86-tune-sched.cc (ix86_issue_rate): Add shijidadao.
+	(ix86_adjust_cost): Ditto.
+	* config/i386/x86-tune.def (X86_TUNE_USE_GATHER_2PARTS): Add m_SHIJIDADAO.
+	(X86_TUNE_USE_GATHER_4PARTS): Ditto.
+	(X86_TUNE_USE_GATHER_8PARTS): Ditto.
+	(X86_TUNE_AVOID_128FMA_CHAINS): Ditto.
+	* doc/extend.texi: Add details about shijidadao.
+	* doc/invoke.texi: Ditto.
+
+2024-06-19  Takayuki 'January June' Suwa  <jjsuwa_sys3175@yahoo.co.jp>
+
+	* config/xtensa/xtensa.cc (print_operand):
+	When outputting MEMW before the instruction, check if the previous
+	instruction is already that.
+
+2024-06-19  Andre Vieira  <andre.simoesdiasvieira@arm.com>
+	    Stam Markianos-Wright  <stam.markianos-wright@arm.com>
+
+	* config/arm/arm-protos.h (arm_target_bb_ok_for_lob): Change
+	declaration to pass basic_block.
+	(arm_attempt_dlstp_transform): New declaration.
+	* config/arm/arm.cc (TARGET_LOOP_UNROLL_ADJUST): Define targethook.
+	(TARGET_PREDICT_DOLOOP_P): Likewise.
+	(arm_target_bb_ok_for_lob): Adapt condition.
+	(arm_mve_get_vctp_lanes): New function.
+	(arm_dl_usage_type): New internal enum.
+	(arm_get_required_vpr_reg): New function.
+	(arm_get_required_vpr_reg_param): New function.
+	(arm_get_required_vpr_reg_ret_val): New function.
+	(arm_mve_get_loop_vctp): New function.
+	(arm_mve_insn_predicated_by): New function.
+	(arm_mve_across_lane_insn_p): New function.
+	(arm_mve_load_store_insn_p): New function.
+	(arm_mve_impl_pred_on_outputs_p): New function.
+	(arm_mve_impl_pred_on_inputs_p): New function.
+	(arm_last_vect_def_insn): New function.
+	(arm_mve_impl_predicated_p): New function.
+	(arm_mve_check_reg_origin_is_num_elems): New function.
+	(arm_mve_dlstp_check_inc_counter): New function.
+	(arm_mve_dlstp_check_dec_counter): New function.
+	(arm_mve_loop_valid_for_dlstp): New function.
+	(arm_predict_doloop_p): New function.
+	(arm_loop_unroll_adjust): New function.
+	(arm_emit_mve_unpredicated_insn_to_seq): New function.
+	(arm_attempt_dlstp_transform): New function.
+	* config/arm/arm.opt (mdlstp): New option.
+	* config/arm/iterators.md (dlstp_elemsize, letp_num_lanes,
+	letp_num_lanes_neg, letp_num_lanes_minus_1): New attributes.
+	(DLSTP, LETP): New iterators.
+	* config/arm/mve.md (predicated_doloop_end_internal<letp_num_lanes>,
+	dlstp<dlstp_elemsize>_insn): New insn patterns.
+	* config/arm/thumb2.md (doloop_end): Adapt to support tail-predicated
+	loops.
+	(doloop_begin): Likewise.
+	* config/arm/types.md (mve_misc): New mve type to represent
+	predicated_loop_end insn sequences.
+	* config/arm/unspecs.md:
+	(DLSTP8, DLSTP16, DLSTP32, DSLTP64,
+	LETP8, LETP16, LETP32, LETP64): New unspecs for DLSTP and LETP.
+
+2024-06-19  Andre Vieira  <andre.simoesdiasvieira@arm.com>
+	    Stam Markianos-Wright  <stam.markianos-wright@arm.com>
+
+	* df-core.cc (df_bb_regno_only_def_find): New helper function.
+	* df.h (df_bb_regno_only_def_find): Declare new function.
+	* loop-doloop.cc (doloop_condition_get): Add support for detecting
+	predicated vectorized hardware loops.
+	(doloop_modify): Add support for GTU condition checks.
+	(doloop_optimize): Update costing computation to support alterations to
+	desc->niter_expr by the backend.
+
+2024-06-19  Collin Funk  <collin.funk1@gmail.com>
+
+	* configure.ac: Add missing quotation of variable
+	gcc_cv_as_mips_explicit_relocs.
+	* configure: Regenerate.
+
+2024-06-19  Takayuki 'January June' Suwa  <jjsuwa_sys3175@yahoo.co.jp>
+
+	* config/xtensa/xtensa-protos.h (xtensa_constantsynth):
+	Change the second argument from HOST_WIDE_INT to rtx.
+	* config/xtensa/xtensa.cc (#include):
+	Add "context.h" and "pass_manager.h".
+	(machine_function): Add a new hash_map field "litpool_usage".
+	(xtensa_constantsynth): Make "src" (the second operand) accept
+	RTX literal instead of its value, and treat both bare and pooled
+	SI/SFmode literals equally by bit-exact canonicalization into
+	CONST_INT RTX internally.  And then, make avoid synthesis if
+	such multiple identical canonicalized literals are found in same
+	function when optimizing for size.  Finally, for literals where
+	synthesis is not possible or has been avoided, re-emit "move"
+	RTXes with canonicalized ones to increase the chances of sharing
+	literal pool entries.
+	* config/xtensa/xtensa.md (split patterns for constant synthesis):
+	Change to simply invoke xtensa_constantsynth() as mentioned above,
+	and add new patterns for when TARGET_AUTO_LITPOOLS is enabled.
+
 2024-06-18  Edwin Lu  <ewlu@rivosinc.com>
 	    Robin Dapp  <rdapp@ventanamicro.com>
 

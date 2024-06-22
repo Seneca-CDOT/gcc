@@ -5255,6 +5255,8 @@ LCF0:
 [	lw $4,%gp_rel(foo)($4)],,
       [AC_DEFINE(MIPS_EXPLICIT_RELOCS, MIPS_EXPLICIT_RELOCS_BASE,
 		 [Define if assembler supports %reloc.])])
+    else
+      gcc_cv_as_mips_explicit_relocs=yes
     fi
 
     if test x$gcc_cv_as_mips_explicit_relocs = xno; then \
@@ -5317,7 +5319,7 @@ x:
 
     AC_MSG_CHECKING(assembler and linker for explicit JALR relocation)
     gcc_cv_as_ld_jalr_reloc=no
-    if test "x$gcc_cv_as_mips_explicit_relocs" = "xyes"; then
+    if test $gcc_cv_as_mips_explicit_relocs = yes; then
       if test $in_tree_ld = yes ; then
         if test "$gcc_cv_gld_major_version" -eq 2 -a "$gcc_cv_gld_minor_version" -ge 20 -o "$gcc_cv_gld_major_version" -gt 2 \
            && test $in_tree_ld_is_elf = yes; then

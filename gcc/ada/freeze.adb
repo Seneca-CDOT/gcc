@@ -2374,18 +2374,24 @@ package body Freeze is
       elsif Is_Array_Type (E) then
          Set_Strict_Alignment (E, Strict_Alignment (Component_Type (E)));
 
-         --  ??? AI12-001: Any component of a packed type that contains an
-         --  aliased part must be aligned according to the alignment of its
-         --  subtype (RM 13.2(7)). This means that the following test:
+         --  RM 13.2(7.1/4): Any component of a packed type that contains an
+         --  aliased part shall be aligned according to the alignment of its
+         --  subtype.
 
-         --    if Has_Aliased_Components (E) then
-         --      Set_Strict_Alignment (E);
-         --    end if;
+         --  Unfortunately this breaks Florist, which has had the bad habit
+         --  of overaligning all the types it declares on 32-bit platforms,
+         --  so make an exception if the component size is the storage unit.
 
-         --  should be implemented here. Unfortunately it would break Florist,
-         --  which has the bad habit of overaligning all the types it declares
-         --  on 32-bit platforms. Other legacy codebases could also be affected
-         --  because this check has historically been missing in GNAT.
+         --  Other legacy codebases could also be affected because this was
+         --  historically not enforced, so -gnatd_l can be used to disable it.
+
+         if Has_Aliased_Components (E)
+           and then not (Known_Component_Size (E)
+                          and then Component_Size (E) = System_Storage_Unit)
+           and then not Debug_Flag_Underscore_L
+         then
+            Set_Strict_Alignment (E);
+         end if;
 
       elsif Is_Record_Type (E) then
          Comp := First_Component (E);
@@ -3086,7 +3092,6 @@ package body Freeze is
                when N_Attribute_Reference =>
                   if Attribute_Name (N) in Name_Access | Name_Unchecked_Access
                     and then Is_Entity_Name (Prefix (N))
-                    and then Is_Type (Entity (Prefix (N)))
                     and then Entity (Prefix (N)) = E
                   then
                      if Ada_Version < Ada_2012 then
@@ -3201,9 +3206,7 @@ package body Freeze is
                --  Search through aspects present on the private type
 
                while Present (Curr_Aspect_Spec) loop
-                  if Get_Aspect_Id (Curr_Aspect_Spec)
-                       = Aspect_No_Parts
-                  then
+                  if Get_Aspect_Id (Curr_Aspect_Spec) = Aspect_No_Parts then
                      Aspect_Spec := Curr_Aspect_Spec;
                      exit;
                   end if;
@@ -3631,7 +3634,9 @@ package body Freeze is
       procedure Freeze_Array_Type (Arr : Entity_Id) is
          FS     : constant Entity_Id := First_Subtype (Arr);
          Ctyp   : constant Entity_Id := Component_Type (Arr);
-         Clause : Entity_Id;
+
+         Clause : Node_Id;
+         --  Set to Component_Size clause or Atomic pragma, if any
 
          Non_Standard_Enum : Boolean := False;
          --  Set true if any of the index types is an enumeration type with a
@@ -3661,13 +3666,10 @@ package body Freeze is
 
             Set_SSO_From_Default (Arr);
 
-            --  Propagate flags for component type
+            --  Propagate flags from component type
 
-            if Is_Controlled (Ctyp)
-              or else Has_Controlled_Component (Ctyp)
-            then
-               Set_Has_Controlled_Component (Arr);
-            end if;
+            Propagate_Concurrent_Flags (Arr, Ctyp);
+            Propagate_Controlled_Flags (Arr, Ctyp, Comp => True);
 
             if Has_Unchecked_Union (Ctyp) then
                Set_Has_Unchecked_Union (Arr);
@@ -3710,76 +3712,57 @@ package body Freeze is
                end;
             end if;
 
-            --  Check for Aliased or Atomic_Components or Full Access with
-            --  unsuitable packing or explicit component size clause given.
+            --  Check for Aliased or Atomic or Full Access or Independent
+            --  components with an unsuitable component size clause given.
+            --  The main purpose is to give an error when bit packing would
+            --  be required to honor the component size, because bit packing
+            --  is incompatible with these aspects; when bit packing is not
+            --  required, the final validation of the component size may be
+            --  left to the back end.
 
-            if (Has_Aliased_Components (Arr)
-                 or else Has_Atomic_Components (Arr)
-                 or else Is_Full_Access (Ctyp))
-              and then
-                (Has_Component_Size_Clause (Arr) or else Is_Packed (Arr))
-            then
-               Alias_Atomic_Check : declare
-
-                  procedure Complain_CS (T : String);
-                  --  Outputs error messages for incorrect CS clause or pragma
-                  --  Pack for aliased or full access components (T is either
-                  --  "aliased" or "atomic" or "volatile full access");
+            if Has_Component_Size_Clause (Arr) then
+               CS_Check : declare
+                  procedure Complain_CS (T : String; Min : Boolean := False);
+                  --  Output an error message for an unsuitable component size
+                  --  clause for independent components (T is either "aliased"
+                  --  or "atomic" or "volatile full access" or "independent").
 
                   -----------------
                   -- Complain_CS --
                   -----------------
 
-                  procedure Complain_CS (T : String) is
+                  procedure Complain_CS (T : String; Min : Boolean := False) is
                   begin
-                     if Has_Component_Size_Clause (Arr) then
-                        Clause :=
-                          Get_Attribute_Definition_Clause
-                            (FS, Attribute_Component_Size);
+                     Clause :=
+                       Get_Attribute_Definition_Clause
+                         (FS, Attribute_Component_Size);
 
-                        Error_Msg_N
-                          ("incorrect component size for "
-                           & T & " components", Clause);
+                     Error_Msg_N
+                       ("incorrect component size for " & T & " components",
+                        Clause);
+
+                     if Known_Static_Esize (Ctyp) then
                         Error_Msg_Uint_1 := Esize (Ctyp);
-                        Error_Msg_N
-                          ("\only allowed value is^", Clause);
-
+                        if Min then
+                           Error_Msg_N ("\minimum allowed value is^", Clause);
+                        else
+                           Error_Msg_N ("\only allowed value is^", Clause);
+                        end if;
                      else
                         Error_Msg_N
-                          ("?cannot pack " & T & " components (RM 13.2(7))",
-                           Get_Rep_Pragma (FS, Name_Pack));
-                        Set_Is_Packed (Arr, False);
+                          ("\must be multiple of storage unit", Clause);
                      end if;
                   end Complain_CS;
 
-               --  Start of processing for Alias_Atomic_Check
+               --  Start of processing for CS_Check
 
                begin
-                  --  If object size of component type isn't known, we cannot
-                  --  be sure so we defer to the back end.
+                  --  OK if the component size and object size are equal, or
+                  --  if the component size is a multiple of the storage unit.
 
-                  if not Known_Static_Esize (Ctyp) then
-                     null;
-
-                  --  Case where component size has no effect. First check for
-                  --  object size of component type multiple of the storage
-                  --  unit size.
-
-                  elsif Esize (Ctyp) mod System_Storage_Unit = 0
-
-                    --  OK in both packing case and component size case if RM
-                    --  size is known and static and same as the object size.
-
-                    and then
-                      ((Known_Static_RM_Size (Ctyp)
-                         and then Esize (Ctyp) = RM_Size (Ctyp))
-
-                        --  Or if we have an explicit component size clause and
-                        --  the component size and object size are equal.
-
-                        or else
-                          (Has_Component_Size_Clause (Arr)
-                            and then Component_Size (Arr) = Esize (Ctyp)))
+                  if (if Known_Static_Esize (Ctyp)
+                       then Component_Size (Arr) = Esize (Ctyp)
+                       else Component_Size (Arr) mod System_Storage_Unit = 0)
                   then
                      null;
 
@@ -3793,67 +3776,76 @@ package body Freeze is
 
                   elsif Is_Volatile_Full_Access (Ctyp) then
                      Complain_CS ("volatile full access");
+
+                  --  For Independent a larger size is permitted
+
+                  elsif (Has_Independent_Components (Arr)
+                          or else Is_Independent (Ctyp))
+                    and then (not Known_Static_Esize (Ctyp)
+                               or else Component_Size (Arr) < Esize (Ctyp))
+                  then
+                     Complain_CS ("independent", Min => True);
                   end if;
-               end Alias_Atomic_Check;
-            end if;
+               end CS_Check;
 
-            --  Check for Independent_Components/Independent with unsuitable
-            --  packing or explicit component size clause given.
+            --  Check for Aliased or Atomic or Full Access or Independent
+            --  components with an unsuitable aspect/pragma Pack given.
+            --  The main purpose is to prevent bit packing from occurring,
+            --  because bit packing is incompatible with these aspects; when
+            --  bit packing cannot occur, the final handling of the packing
+            --  may be left to the back end.
 
-            if (Has_Independent_Components (Arr) or else Is_Independent (Ctyp))
-                  and then
-               (Has_Component_Size_Clause  (Arr) or else Is_Packed (Arr))
-            then
+            elsif Is_Packed (Arr) and then Known_Static_RM_Size (Ctyp) then
+               Pack_Check : declare
+
+                  procedure Complain_Pack (T : String);
+                  --  Output a warning message for an unsuitable aspect/pragma
+                  --  Pack for independent components (T is either "aliased" or
+                  --  "atomic" or "volatile full access" or "independent") and
+                  --  reset the Is_Packed flag on the array type.
+
+                  -------------------
+                  -- Complain_Pack --
+                  -------------------
+
+                  procedure Complain_Pack (T : String) is
+                  begin
+                     Error_Msg_N
+                       ("?cannot pack " & T & " components (RM 13.2(7))",
+                        Get_Rep_Pragma (FS, Name_Pack));
+
+                     Set_Is_Packed (Arr, False);
+                  end Complain_Pack;
+
+               --  Start of processing for Pack_Check
+
                begin
-                  --  If object size of component type isn't known, we cannot
-                  --  be sure so we defer to the back end.
+                  --  OK if the component size and object size are equal, or
+                  --  if the component size is a multiple of the storage unit.
 
-                  if not Known_Static_Esize (Ctyp) then
-                     null;
-
-                  --  Case where component size has no effect. First check for
-                  --  object size of component type multiple of the storage
-                  --  unit size.
-
-                  elsif Esize (Ctyp) mod System_Storage_Unit = 0
-
-                    --  OK in both packing case and component size case if RM
-                    --  size is known and multiple of the storage unit size.
-
-                    and then
-                      ((Known_Static_RM_Size (Ctyp)
-                         and then RM_Size (Ctyp) mod System_Storage_Unit = 0)
-
-                        --  Or if we have an explicit component size clause and
-                        --  the component size is larger than the object size.
-
-                        or else
-                          (Has_Component_Size_Clause (Arr)
-                            and then Component_Size (Arr) >= Esize (Ctyp)))
+                  if (if Known_Static_Esize (Ctyp)
+                       then RM_Size (Ctyp) = Esize (Ctyp)
+                       else RM_Size (Ctyp) mod System_Storage_Unit = 0)
                   then
                      null;
 
-                  else
-                     if Has_Component_Size_Clause (Arr) then
-                        Clause :=
-                          Get_Attribute_Definition_Clause
-                            (FS, Attribute_Component_Size);
+                  elsif Has_Aliased_Components (Arr) then
+                     Complain_Pack ("aliased");
 
-                        Error_Msg_N
-                          ("incorrect component size for "
-                           & "independent components", Clause);
-                        Error_Msg_Uint_1 := Esize (Ctyp);
-                        Error_Msg_N
-                          ("\minimum allowed is^", Clause);
+                  elsif Has_Atomic_Components (Arr)
+                    or else Is_Atomic (Ctyp)
+                  then
+                     Complain_Pack ("atomic");
 
-                     else
-                        Error_Msg_N
-                          ("?cannot pack independent components (RM 13.2(7))",
-                           Get_Rep_Pragma (FS, Name_Pack));
-                        Set_Is_Packed (Arr, False);
-                     end if;
+                  elsif Is_Volatile_Full_Access (Ctyp) then
+                     Complain_Pack ("volatile full access");
+
+                  elsif Has_Independent_Components (Arr)
+                    or else Is_Independent (Ctyp)
+                  then
+                     Complain_Pack ("independent");
                   end if;
-               end;
+               end Pack_Check;
             end if;
 
             --  If packing was requested or if the component size was
@@ -5084,6 +5076,9 @@ package body Freeze is
          --  Accumulates total Esize values of all elementary components. Used
          --  for processing of Implicit_Packing.
 
+         Final_Storage_Only : Boolean := True;
+         --  Used to compute the Finalize_Storage_Only flag
+
          Placed_Component : Boolean := False;
          --  Set True if we find at least one component with a component
          --  clause (used to warn about useless Bit_Order pragmas, and also
@@ -5684,11 +5679,12 @@ package body Freeze is
                Freeze_And_Append (Corresponding_Remote_Type (Rec), N, Result);
             end if;
 
-            --  Check for controlled components, unchecked unions, and type
-            --  invariants.
+            --  Check for tasks, protected and controlled components, unchecked
+            --  unions, and type invariants.
 
             Comp := First_Component (Rec);
             while Present (Comp) loop
+               Propagate_Concurrent_Flags (Rec, Etype (Comp));
 
                --  Do not set Has_Controlled_Component on a class-wide
                --  equivalent type. See Make_CW_Equivalent_Type.
@@ -5708,6 +5704,9 @@ package body Freeze is
                              (Corresponding_Record_Type (Etype (Comp)))))
                then
                   Set_Has_Controlled_Component (Rec);
+                  Final_Storage_Only :=
+                    Final_Storage_Only
+                      and then Finalize_Storage_Only (Etype (Comp));
                end if;
 
                if Has_Unchecked_Union (Etype (Comp)) then
@@ -5739,6 +5738,15 @@ package body Freeze is
 
                Next_Component (Comp);
             end loop;
+
+            --  For a type that is not directly controlled but has controlled
+            --  components, Finalize_Storage_Only is set if all the controlled
+            --  components are Finalize_Storage_Only.
+
+            if not Is_Controlled (Rec) and then Has_Controlled_Component (Rec)
+            then
+               Set_Finalize_Storage_Only (Rec, Final_Storage_Only);
+            end if;
          end if;
 
          --  Enforce the restriction that access attributes with a current
@@ -8856,7 +8864,8 @@ package body Freeze is
             end if;
 
             --  The current scope may be that of a constrained component of
-            --  an enclosing record declaration, or of a loop of an enclosing
+            --  an enclosing record declaration, or a block of an enclosing
+            --  declare expression in Ada 2022, or of a loop of an enclosing
             --  quantified expression or aggregate with an iterated component
             --  in Ada 2022, which is above the current scope in the scope
             --  stack. Indeed in the context of a quantified expression or
@@ -8868,7 +8877,7 @@ package body Freeze is
 
             if not Is_Compilation_Unit (Current_Scope)
               and then (Is_Record_Type (Scope (Current_Scope))
-                         or else (Ekind (Current_Scope) = E_Loop
+                         or else (Ekind (Current_Scope) in E_Block | E_Loop
                                    and then Is_Internal (Current_Scope)))
             then
                Pos := Pos - 1;
@@ -8903,8 +8912,8 @@ package body Freeze is
       --  Now we have the right place to do the freezing. First, a special
       --  adjustment, if we are in spec-expression analysis mode, these freeze
       --  actions must not be thrown away (normally all inserted actions are
-      --  thrown away in this mode. However, the freeze actions are from static
-      --  expressions and one of the important reasons we are doing this
+      --  thrown away in this mode). However, the freeze actions are from
+      --  static expressions and one of the important reasons we are doing this
       --  special analysis is to get these freeze actions. Therefore we turn
       --  off the In_Spec_Expression mode to propagate these freeze actions.
       --  This also means they get properly analyzed and expanded.

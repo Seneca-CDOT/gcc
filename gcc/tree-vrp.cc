@@ -228,15 +228,6 @@ remove_unreachable::handle_early (gimple *s, edge e)
       // Nothing at this late stage we can do if the write fails.
       if (!set_range_info (name, r))
 	continue;
-      if (dump_file)
-	{
-	  fprintf (dump_file, "Global Exported (via early unreachable): ");
-	  print_generic_expr (dump_file, name, TDF_SLIM);
-	  fprintf (dump_file, " = ");
-	  gimple_range_global (r, name);
-	  r.dump (dump_file);
-	  fputc ('\n', dump_file);
-	}
     }
 
   tree ssa = lhs_p ? gimple_cond_lhs (s) : gimple_cond_rhs (s);
@@ -280,6 +271,17 @@ remove_unreachable::remove ()
       gimple *s = gimple_outgoing_range_stmt_p (e->src);
       gcc_checking_assert (gimple_code (s) == GIMPLE_COND);
 
+      tree name = gimple_range_ssa_p (gimple_cond_lhs (s));
+      if (!name)
+	name = gimple_range_ssa_p (gimple_cond_rhs (s));
+      // Check if global value can be set for NAME.
+      if (name && fully_replaceable (name, src))
+	{
+	  value_range r (TREE_TYPE (name));
+	  if (gori_name_on_edge (r, name, e, &m_ranger))
+	    set_range_info (name, r);
+	}
+
       change = true;
       // Rewrite the condition.
       if (e->flags & EDGE_TRUE_VALUE)
@@ -305,13 +307,9 @@ remove_unreachable::remove_and_update_globals ()
   if (m_list.length () == 0)
     return false;
 
-  // If there is no import/export info, just remove unreachables if necessary.
+  // If there is no import/export info, Do basic removal.
   if (!m_ranger.gori_ssa ())
     return remove ();
-
-  // Ensure the cache in SCEV has been cleared before processing
-  // globals to be removed.
-  scev_reset ();
 
   bool change = false;
   tree name;
@@ -404,15 +402,6 @@ remove_unreachable::remove_and_update_globals ()
       if (!set_range_info (name, r))
 	continue;
       change = true;
-      if (dump_file)
-	{
-	  fprintf (dump_file, "Global Exported (via unreachable): ");
-	  print_generic_expr (dump_file, name, TDF_SLIM);
-	  fprintf (dump_file, " = ");
-	  gimple_range_global (r, name);
-	  r.dump (dump_file);
-	  fputc ('\n', dump_file);
-	}
     }
   return change;
 }
@@ -1107,6 +1096,9 @@ execute_ranger_vrp (struct function *fun, bool final_p)
   rvrp_folder folder (ranger, final_p);
   phi_analysis_initialize (ranger->const_query ());
   folder.substitute_and_fold ();
+  // Ensure the cache in SCEV has been cleared before processing
+  // globals to be removed.
+  scev_reset ();
   // Remove tagged builtin-unreachable and maybe update globals.
   folder.m_unreachable.remove_and_update_globals ();
   if (dump_file && (dump_flags & TDF_DETAILS))
@@ -1168,9 +1160,15 @@ execute_ranger_vrp (struct function *fun, bool final_p)
 class fvrp_folder : public substitute_and_fold_engine
 {
 public:
-  fvrp_folder (dom_ranger *dr) : substitute_and_fold_engine (),
-				 m_simplifier (dr)
-  { m_dom_ranger = dr; }
+  fvrp_folder (dom_ranger *dr, bool final_p) : substitute_and_fold_engine (),
+					       m_simplifier (dr)
+  {
+    m_dom_ranger = dr;
+    if (final_p)
+      m_unreachable = new remove_unreachable (*dr, final_p);
+    else
+      m_unreachable = NULL;
+  }
 
   ~fvrp_folder () { }
 
@@ -1228,6 +1226,9 @@ public:
 	value_range vr(type);
 	m_dom_ranger->range_of_stmt (vr, s);
       }
+    if (m_unreachable && gimple_code (s) == GIMPLE_COND)
+      m_unreachable->maybe_register (s);
+
   }
 
   bool fold_stmt (gimple_stmt_iterator *gsi) override
@@ -1238,6 +1239,7 @@ public:
     return ret;
   }
 
+  remove_unreachable *m_unreachable;
 private:
   DISABLE_COPY_AND_ASSIGN (fvrp_folder);
   simplify_using_ranges m_simplifier;
@@ -1248,17 +1250,21 @@ private:
 // Main entry point for a FAST VRP pass using a dom ranger.
 
 unsigned int
-execute_fast_vrp (struct function *fun)
+execute_fast_vrp (struct function *fun, bool final_p)
 {
   calculate_dominance_info (CDI_DOMINATORS);
   dom_ranger dr;
-  fvrp_folder folder (&dr);
+  fvrp_folder folder (&dr, final_p);
 
   gcc_checking_assert (!fun->x_range_query);
   fun->x_range_query = &dr;
+  get_range_query (fun)->create_relation_oracle ();
 
   folder.substitute_and_fold ();
+  if (folder.m_unreachable)
+    folder.m_unreachable->remove ();
 
+  get_range_query (fun)->destroy_relation_oracle ();
   fun->x_range_query = NULL;
   return 0;
 }
@@ -1325,7 +1331,7 @@ public:
     {
       // Check for fast vrp.
       if (&data == &pass_data_fast_vrp)
-	return execute_fast_vrp (fun);
+	return execute_fast_vrp (fun, final_p);
 
       return execute_ranger_vrp (fun, final_p);
     }
@@ -1372,18 +1378,9 @@ public:
 	  if (!value_range::supports_type_p (type))
 	    continue;
 	  value_range assume_range (type);
+	  // Set the global range of NAME to anything calculated.
 	  if (query.assume_range_p (assume_range, name))
-	    {
-	      // Set the global range of NAME to anything calculated.
-	      set_range_info (name, assume_range);
-	      if (dump_file)
-		{
-		  print_generic_expr (dump_file, name, TDF_SLIM);
-		  fprintf (dump_file, " -> ");
-		  assume_range.dump (dump_file);
-		  fputc ('\n', dump_file);
-		}
-	    }
+	    set_range_info (name, assume_range);
 	}
       if (dump_file)
 	{

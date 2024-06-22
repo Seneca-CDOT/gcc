@@ -299,10 +299,10 @@ package body Exp_Util is
 
          if Present (Msg_Node) then
             Error_Msg_N
-              ("info: atomic synchronization set for &?.n?", Msg_Node);
+              ("atomic synchronization set for &?.n?", Msg_Node);
          else
             Error_Msg_N
-              ("info: atomic synchronization set?.n?", N);
+              ("atomic synchronization set?.n?", N);
          end if;
       end if;
    end Activate_Atomic_Synchronization;
@@ -10671,12 +10671,8 @@ package body Exp_Util is
          Set_Is_Itype       (Priv_Subtyp);
          Set_Associated_Node_For_Itype (Priv_Subtyp, E);
 
-         if Is_Tagged_Type  (Priv_Subtyp) then
-            Set_Class_Wide_Type
-              (Base_Type (Priv_Subtyp), Class_Wide_Type (Unc_Typ));
-            Set_Direct_Primitive_Operations (Priv_Subtyp,
-              Direct_Primitive_Operations (Unc_Typ));
-         end if;
+         Set_Direct_Primitive_Operations
+           (Priv_Subtyp, Direct_Primitive_Operations (Unc_Typ));
 
          Set_Full_View (Priv_Subtyp, Full_Subtyp);
 

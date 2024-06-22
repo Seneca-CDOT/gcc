@@ -37,8 +37,9 @@ file, or in a ``.adc`` file corresponding to your project.
 
 .. attention:: You can activate the extended set of extensions by using either
    the ``-gnatX0`` command line flag, or the pragma ``Extensions_Allowed`` with
-   ``All`` as an argument. However, it is not recommended you use this subset
-   for serious projects, and is only means as a playground/technology preview.
+   ``All_Extensions`` as an argument. However, it is not recommended you use
+   this subset for serious projects; it is only meant as a technology preview
+   for use in playground experiments.
 
 .. _Curated_Language_Extensions:
 
@@ -355,8 +356,8 @@ particular the ``Shift_Left`` and ``Shift_Right`` intrinsics.
 Experimental Language Extensions
 ================================
 
-Pragma Storage_Model
---------------------
+Storage Model
+-------------
 
 This feature proposes to redesign the concepts of Storage Pools into a more
 efficient model allowing higher performances and easier integration with low
@@ -367,6 +368,33 @@ support interactions with GPU.
 
 Here is a link to the full RFC:
 https://github.com/AdaCore/ada-spark-rfcs/blob/master/prototyped/rfc-storage-model.rst
+
+Attribute Super
+---------------
+.. index:: Super
+
+The ``Super`` attribute can be applied to objects of tagged types in order
+to obtain a view conversion to the most immediate specific parent type.
+
+It cannot be applied to objects of types without any ancestors, or types whose
+immediate parent is abstract.
+
+.. code-block:: ada
+
+  type T1 is tagged null record;
+  procedure P (V : T1);
+
+  type T2 is new T1 with null record;
+  procedure P (V : T2);
+
+  procedure Call (V : T2'Class) is
+  begin
+    V'Super.P; --  Equivalent to "P (T1 (V));", a nondispatching call
+               --  to T1's primitive procedure P.
+  end;
+
+Here is a link to the full RFC:
+https://github.com/QuentinOchem/ada-spark-rfcs/blob/oop/considered/rfc-oop-super.rst
 
 Simpler accessibility model
 ---------------------------

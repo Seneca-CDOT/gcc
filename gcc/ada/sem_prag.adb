@@ -17422,17 +17422,17 @@ package body Sem_Prag is
          -- Extensions_Allowed --
          ------------------------
 
-         --  pragma Extensions_Allowed (ON | OFF | ALL);
+         --  pragma Extensions_Allowed (ON | OFF | ALL_EXTENSIONS);
 
          when Pragma_Extensions_Allowed =>
             GNAT_Pragma;
             Check_Arg_Count (1);
             Check_No_Identifiers;
-            Check_Arg_Is_One_Of (Arg1, Name_On, Name_Off, Name_All);
+            Check_Arg_Is_One_Of (Arg1, Name_On, Name_Off, Name_All_Extensions);
 
             if Chars (Get_Pragma_Arg (Arg1)) = Name_On then
                Ada_Version := Ada_With_Core_Extensions;
-            elsif Chars (Get_Pragma_Arg (Arg1)) = Name_All then
+            elsif Chars (Get_Pragma_Arg (Arg1)) = Name_All_Extensions then
                Ada_Version := Ada_With_All_Extensions;
             else
                Ada_Version := Ada_Version_Explicit;
@@ -20464,11 +20464,7 @@ package body Sem_Prag is
 
          --  pragma Max_Entry_Queue_Length (static_integer_EXPRESSION);
 
-         --  This processing is shared by Pragma_Max_Entry_Queue_Depth and
-         --  Pragma_Max_Queue_Length.
-
          when Pragma_Max_Entry_Queue_Length
-            | Pragma_Max_Entry_Queue_Depth
             | Pragma_Max_Queue_Length
          =>
          Max_Entry_Queue_Length : declare
@@ -20478,9 +20474,7 @@ package body Sem_Prag is
             Val        : Uint;
 
          begin
-            if Prag_Id = Pragma_Max_Entry_Queue_Depth
-              or else Prag_Id = Pragma_Max_Queue_Length
-            then
+            if Prag_Id = Pragma_Max_Queue_Length then
                GNAT_Pragma;
             end if;
 
@@ -20515,10 +20509,6 @@ package body Sem_Prag is
             if (Has_Rep_Pragma (Entry_Id, Name_Max_Entry_Queue_Length)
                   and then
                 Prag_Id /= Pragma_Max_Entry_Queue_Length)
-                 or else
-               (Has_Rep_Pragma (Entry_Id, Name_Max_Entry_Queue_Depth)
-                  and then
-                Prag_Id /= Pragma_Max_Entry_Queue_Depth)
                  or else
                (Has_Rep_Pragma (Entry_Id, Name_Max_Queue_Length)
                   and then
@@ -21089,6 +21079,18 @@ package body Sem_Prag is
                   Set_Restriction (No_Tasking, N);
                end if;
             end;
+
+         ----------------------------------
+         -- Interrupts_System_By_Default --
+         ----------------------------------
+
+         --  pragma Interrupts_System_By_Default;
+
+         when Pragma_Interrupts_System_By_Default =>
+            GNAT_Pragma;
+            Check_Arg_Count (0);
+            Check_Valid_Configuration_Pragma;
+            Interrupts_System_By_Default := True;
 
          -----------------------
          -- No_Tagged_Streams --
@@ -32766,7 +32768,6 @@ package body Sem_Prag is
       Pragma_Machine_Attribute              => -1,
       Pragma_Main                           => -1,
       Pragma_Main_Storage                   => -1,
-      Pragma_Max_Entry_Queue_Depth          =>  0,
       Pragma_Max_Entry_Queue_Length         =>  0,
       Pragma_Max_Queue_Length               =>  0,
       Pragma_Memory_Size                    =>  0,
@@ -32778,6 +32779,7 @@ package body Sem_Prag is
       Pragma_No_Inline                      =>  0,
       Pragma_No_Return                      =>  0,
       Pragma_No_Run_Time                    => -1,
+      Pragma_Interrupts_System_By_Default   =>  0,
       Pragma_No_Strict_Aliasing             => -1,
       Pragma_No_Tagged_Streams              =>  0,
       Pragma_Normalize_Scalars              =>  0,

@@ -8157,13 +8157,15 @@ package body Sem_Util is
       if not Is_Constrained (Typ) then
          All_Static := False;
          Has_Empty  := False;
+         return;
 
       --  A string literal has static bounds, and is not empty as long as it
       --  contains at least one character.
 
       elsif Ekind (Typ) = E_String_Literal_Subtype then
          All_Static := True;
-         Has_Empty  := String_Literal_Length (Typ) > 0;
+         Has_Empty  := String_Literal_Length (Typ) = 0;
+         return;
       end if;
 
       --  Assume that all bounds are static and not empty
@@ -10709,8 +10711,6 @@ package body Sem_Util is
    function Get_Max_Queue_Length (Id : Entity_Id) return Uint is
       pragma Assert (Is_Entry (Id));
       PMQL  : constant Entity_Id := Get_Pragma (Id, Pragma_Max_Queue_Length);
-      PMEQD : constant Entity_Id :=
-         Get_Pragma (Id, Pragma_Max_Entry_Queue_Depth);
       PMEQL : constant Entity_Id :=
          Get_Pragma (Id, Pragma_Max_Entry_Queue_Length);
       Max   : Uint;
@@ -10725,9 +10725,6 @@ package body Sem_Util is
       if Present (PMQL) then
          Max := Expr_Value
             (Expression (First (Pragma_Argument_Associations (PMQL))));
-      elsif Present (PMEQD) then
-         Max := Expr_Value
-            (Expression (First (Pragma_Argument_Associations (PMEQD))));
       elsif Present (PMEQL) then
          Max := Expr_Value
             (Expression (First (Pragma_Argument_Associations (PMEQL))));
@@ -12124,11 +12121,14 @@ package body Sem_Util is
            and then Is_Constrained (Etype (Subtype_Mark (N)));
 
       --  For all other names, it is sufficient to have a constrained
-      --  Unchecked_Union nominal subtype.
+      --  Unchecked_Union nominal subtype, unless it is incomplete or
+      --  private because it cannot have a known discriminant part in
+      --  this case (RM B.3.3 (11/2)).
 
       else
          return Is_Unchecked_Union (Etype (N))
-           and then Is_Constrained (Etype (N));
+           and then Is_Constrained (Etype (N))
+           and then not Is_Incomplete_Or_Private_Type (Etype (N));
       end if;
    end Has_Inferable_Discriminants;
 
@@ -12224,9 +12224,9 @@ package body Sem_Util is
       return
         Ekind (Id) = E_Entry
           and then
-        (Present (Get_Pragma (Id, Pragma_Max_Queue_Length)) or else
-         Present (Get_Pragma (Id, Pragma_Max_Entry_Queue_Depth)) or else
-         Present (Get_Pragma (Id, Pragma_Max_Entry_Queue_Length)));
+            (Present (Get_Pragma (Id, Pragma_Max_Queue_Length))
+              or else
+             Present (Get_Pragma (Id, Pragma_Max_Entry_Queue_Length)));
    end Has_Max_Queue_Length;
 
    ---------------------------------
@@ -22259,7 +22259,7 @@ package body Sem_Util is
             elsif Is_Record_Type (Input_Typ) then
                Comp := First_Component (Input_Typ);
                while Present (Comp) loop
-                  --  Skip _Parent component like Expand_Freeze_Record_Type
+                  --  Skip _Parent component like Record_Type_Definition
 
                   if Chars (Comp) /= Name_uParent
                     and then Needs_Finalization (Etype (Comp))
@@ -26242,6 +26242,54 @@ package body Sem_Util is
          Set_Has_Timing_Event (Typ);
       end if;
    end Propagate_Concurrent_Flags;
+
+   --------------------------------
+   -- Propagate_Controlled_Flags --
+   --------------------------------
+
+   procedure Propagate_Controlled_Flags
+     (Typ      : Entity_Id;
+      From_Typ : Entity_Id;
+      Comp     : Boolean := False;
+      Deriv    : Boolean := False)
+   is
+   begin
+      --  It does not make sense to have both Comp and Deriv set True
+
+      pragma Assert (not Comp or else not Deriv);
+
+      --  This implementation only supports array types for the component case.
+      --  Disregard Is_Controlled_Active and Disable_Controlled in this case.
+
+      if Comp then
+         pragma Assert (Is_Array_Type (Typ));
+
+      else
+         if Is_Controlled_Active (From_Typ) then
+            Set_Is_Controlled_Active (Typ);
+         end if;
+
+         if Disable_Controlled (From_Typ) then
+            Set_Disable_Controlled (Typ);
+         end if;
+      end if;
+
+      --  Direct controlled types do not inherit Finalize_Storage_Only
+
+      if not (Deriv and then Is_Controlled (From_Typ)) then
+         if Finalize_Storage_Only (From_Typ) then
+            Set_Finalize_Storage_Only (Typ);
+         end if;
+      end if;
+
+      --  Is_Controlled yields Has_Controlled_Component for component
+
+      if Has_Controlled_Component (From_Typ)
+        or else (Comp and then Is_Controlled (From_Typ))
+      then
+         Set_Has_Controlled_Component (Typ);
+      end if;
+   end Propagate_Controlled_Flags;
 
    ------------------------------
    -- Propagate_DIC_Attributes --

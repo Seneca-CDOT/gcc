@@ -46,6 +46,7 @@ with Gnatvsn;        use Gnatvsn;
 with Itypes;         use Itypes;
 with Lib;            use Lib;
 with Lib.Xref;       use Lib.Xref;
+with Mutably_Tagged; use Mutably_Tagged;
 with Nlists;         use Nlists;
 with Nmake;          use Nmake;
 with Opt;            use Opt;
@@ -5534,7 +5535,42 @@ package body Sem_Attr is
          --  The prefix must be preanalyzed as the full analysis will take
          --  place during expansion.
 
-         Preanalyze_And_Resolve (P);
+         --  If the attribute reference has an expected type or shall resolve
+         --  to a given type, the same applies to the prefix; otherwise the
+         --  prefix shall be resolved independently of context (RM 6.1.1(8/5)).
+
+         if Nkind (Parent (N)) = N_Qualified_Expression then
+            Preanalyze_And_Resolve (P, Etype (Parent (N)));
+
+         --  An special case occurs when the prefix is an overloaded function
+         --  call without formals; in order to identify such case we preanalyze
+         --  a duplicate of the prefix ignoring errors.
+
+         else
+            declare
+               P_Copy : constant Node_Id := New_Copy_Tree (P);
+
+            begin
+               Set_Parent (P_Copy, Parent (P));
+
+               Preanalyze_And_Resolve_Without_Errors (P_Copy);
+
+               --  In the special case of a call to an overloaded function
+               --  without extra formals we resolve it using its returned
+               --  type (which is the unique valid call); if this not the
+               --  case we will report the error later, as part of the
+               --  regular analysis of the full expression.
+
+               if Nkind (P_Copy) = N_Function_Call
+                 and then Is_Overloaded (Name (P_Copy))
+                 and then No (First_Formal (Entity (Name (P_Copy))))
+               then
+                  Preanalyze_And_Resolve (P, Etype (Name (P_Copy)));
+               else
+                  Preanalyze_And_Resolve (P);
+               end if;
+            end;
+         end if;
 
          --  Ensure that the prefix does not contain attributes 'Old or 'Result
 
@@ -6653,6 +6689,7 @@ package body Sem_Attr is
          Error_Msg_GNAT_Extension ("attribute %", Sloc (N));
 
          Check_E0;
+         Check_Dereference;
 
          --  Verify that we are looking at a type with ancestors
 
@@ -6683,6 +6720,12 @@ package body Sem_Attr is
             elsif Depends_On_Private (P_Type) then
                Error_Attr_P ("prefix type of % is a private extension");
 
+            --  Disallow view conversions to interfaces in order to avoid
+            --  depending on whether an interface type is used as a parent
+            --  or progenitor type.
+
+            elsif Is_Interface (Node (First_Elmt (Parents))) then
+               Error_Attr_P ("type of % cannot be an interface");
             end if;
 
             --  Generate a view conversion and analyze it
@@ -6711,7 +6754,10 @@ package body Sem_Attr is
          Check_E0;
          Check_Dereference;
 
-         if not Is_Tagged_Type (P_Type) then
+         if Is_Mutably_Tagged_CW_Equivalent_Type (P_Type) then
+            null;
+
+         elsif not Is_Tagged_Type (P_Type) then
             Error_Attr_P ("prefix of % attribute must be tagged");
 
          --  Next test does not apply to generated code why not, and what does
@@ -6863,8 +6909,8 @@ package body Sem_Attr is
       --------------
 
       when Attribute_Type_Key => Type_Key : declare
-         Full_Name  : constant String_Id :=
-                        Fully_Qualified_Name_String (Entity (P));
+         Full_Name : constant String_Id :=
+           Fully_Qualified_Name_String (Entity (P), Append_NUL => False);
 
          CRC : CRC32;
          --  The computed signature for the type
@@ -6997,9 +7043,9 @@ package body Sem_Attr is
          Start_String;
          Deref := False;
 
-         --  Copy all characters in Full_Name but the trailing NUL
+         --  Copy all characters in Full_Name
 
-         for J in 1 .. String_Length (Full_Name) - 1 loop
+         for J in 1 .. String_Length (Full_Name) loop
             Store_String_Char (Get_String_Char (Full_Name, Pos (J)));
          end loop;
 
@@ -11743,6 +11789,10 @@ package body Sem_Attr is
                   Error_Msg_F
                     ("illegal attribute for discriminant-dependent component",
                      P);
+
+               elsif Depends_On_Mutably_Tagged_Ext_Comp (P) then
+                  Error_Msg_F
+                    ("illegal attribute for mutably tagged component", P);
                end if;
 
                --  Check static matching rule of 3.10.2(27). Nominal subtype

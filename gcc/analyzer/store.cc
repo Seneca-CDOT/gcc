@@ -110,7 +110,7 @@ uncertainty_t::dump (bool simple) const
   pretty_printer pp;
   pp_format_decoder (&pp) = default_tree_printer;
   pp_show_color (&pp) = pp_show_color (global_dc->printer);
-  pp.buffer->stream = stderr;
+  pp.set_output_stream (stderr);
   dump_to_pp (&pp, simple);
   pp_newline (&pp);
   pp_flush (&pp);
@@ -147,7 +147,7 @@ binding_key::dump (bool simple) const
   pretty_printer pp;
   pp_format_decoder (&pp) = default_tree_printer;
   pp_show_color (&pp) = pp_show_color (global_dc->printer);
-  pp.buffer->stream = stderr;
+  pp.set_output_stream (stderr);
   dump_to_pp (&pp, simple);
   pp_newline (&pp);
   pp_flush (&pp);
@@ -231,7 +231,7 @@ DEBUG_FUNCTION void
 bit_range::dump () const
 {
   pretty_printer pp;
-  pp.buffer->stream = stderr;
+  pp.set_output_stream (stderr);
   dump_to_pp (&pp);
   pp_newline (&pp);
   pp_flush (&pp);
@@ -507,7 +507,7 @@ DEBUG_FUNCTION void
 byte_range::dump () const
 {
   pretty_printer pp;
-  pp.buffer->stream = stderr;
+  pp.set_output_stream (stderr);
   dump_to_pp (&pp);
   pp_newline (&pp);
   pp_flush (&pp);
@@ -776,7 +776,7 @@ binding_map::dump (bool simple) const
   pretty_printer pp;
   pp_format_decoder (&pp) = default_tree_printer;
   pp_show_color (&pp) = pp_show_color (global_dc->printer);
-  pp.buffer->stream = stderr;
+  pp.set_output_stream (stderr);
   dump_to_pp (&pp, simple, true);
   pp_newline (&pp);
   pp_flush (&pp);
@@ -1403,7 +1403,7 @@ binding_cluster::dump (bool simple) const
   pretty_printer pp;
   pp_format_decoder (&pp) = default_tree_printer;
   pp_show_color (&pp) = pp_show_color (global_dc->printer);
-  pp.buffer->stream = stderr;
+  pp.set_output_stream (stderr);
   pp_string (&pp, "  cluster for: ");
   m_base_region->dump_to_pp (&pp, simple);
   pp_string (&pp, ": ");
@@ -1451,7 +1451,7 @@ binding_cluster::to_json () const
   return cluster_obj;
 }
 
-std::unique_ptr<text_art::widget>
+std::unique_ptr<text_art::tree_widget>
 binding_cluster::make_dump_widget (const text_art::dump_widget_info &dwi,
 				   store_manager *mgr) const
 {
@@ -2281,6 +2281,7 @@ binding_cluster::get_representative_path_vars (const region_model *model,
 					       svalue_set *visited,
 					       const region *base_reg,
 					       const svalue *sval,
+					       logger *logger,
 					       auto_vec<path_var> *out_pvs)
   const
 {
@@ -2308,7 +2309,8 @@ binding_cluster::get_representative_path_vars (const region_model *model,
 		{
 		  if (path_var pv
 		      = model->get_representative_path_var (subregion,
-							    visited))
+							    visited,
+							    logger))
 		    append_pathvar_with_type (pv, sval->get_type (), out_pvs);
 		}
 	    }
@@ -2317,7 +2319,8 @@ binding_cluster::get_representative_path_vars (const region_model *model,
 	      const symbolic_binding *skey = (const symbolic_binding *)key;
 	      if (path_var pv
 		  = model->get_representative_path_var (skey->get_region (),
-							visited))
+							visited,
+							logger))
 		append_pathvar_with_type (pv, sval->get_type (), out_pvs);
 	    }
 	}
@@ -2636,7 +2639,7 @@ store::dump (bool simple) const
   pretty_printer pp;
   pp_format_decoder (&pp) = default_tree_printer;
   pp_show_color (&pp) = pp_show_color (global_dc->printer);
-  pp.buffer->stream = stderr;
+  pp.set_output_stream (stderr);
   dump_to_pp (&pp, simple, true, NULL);
   pp_newline (&pp);
   pp_flush (&pp);
@@ -2707,7 +2710,7 @@ store::to_json () const
   return store_obj;
 }
 
-std::unique_ptr<text_art::widget>
+std::unique_ptr<text_art::tree_widget>
 store::make_dump_widget (const text_art::dump_widget_info &dwi,
 			 store_manager *mgr) const
 {
@@ -3282,6 +3285,7 @@ void
 store::get_representative_path_vars (const region_model *model,
 				     svalue_set *visited,
 				     const svalue *sval,
+				     logger *logger,
 				     auto_vec<path_var> *out_pvs) const
 {
   gcc_assert (sval);
@@ -3293,6 +3297,7 @@ store::get_representative_path_vars (const region_model *model,
       const region *base_reg = (*iter).first;
       binding_cluster *cluster = (*iter).second;
       cluster->get_representative_path_vars (model, visited, base_reg, sval,
+					     logger,
 					     out_pvs);
     }
 
@@ -3300,7 +3305,8 @@ store::get_representative_path_vars (const region_model *model,
     {
       const region *reg = init_sval->get_region ();
       if (path_var pv = model->get_representative_path_var (reg,
-							    visited))
+							    visited,
+							    logger))
 	out_pvs->safe_push (pv);
     }
 }

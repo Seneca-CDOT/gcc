@@ -2219,7 +2219,7 @@ package Sem_Util is
    --  type be partially initialized.
 
    function Is_Potentially_Unevaluated (N : Node_Id) return Boolean;
-   --  Predicate to implement definition given in RM 6.1.1 (20/3)
+   --  Predicate to implement definition given in RM 2012 6.1.1 (20/3)
 
    function Is_Potentially_Persistent_Type (T : Entity_Id) return Boolean;
    --  Determines if type T is a potentially persistent type. A potentially
@@ -3387,6 +3387,9 @@ package Sem_Util is
 
    function Yields_Universal_Type (N : Node_Id) return Boolean;
    --  Determine whether unanalyzed node N yields a universal type
+
+   procedure Preanalyze_And_Resolve_Without_Errors (N : Node_Id);
+   --  Preanalyze and resolve N without reporting errors
 
    procedure Preanalyze_Without_Errors (N : Node_Id);
    --  Preanalyze N without reporting errors

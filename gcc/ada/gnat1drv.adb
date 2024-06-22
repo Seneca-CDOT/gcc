@@ -207,13 +207,6 @@ procedure Gnat1drv is
          Error_To_Warning := True;
       end if;
 
-      --  -gnatdJ sets Include_Subprogram_In_Messages, adding the related
-      --  subprogram as part of the error and warning messages.
-
-      if Debug_Flag_JJ then
-         Include_Subprogram_In_Messages := True;
-      end if;
-
       --  Disable CodePeer_Mode in Check_Syntax, since we need front-end
       --  expansion.
 
@@ -357,9 +350,13 @@ procedure Gnat1drv is
 
          Generate_SCIL := True;
 
-         --  Enable assertions, since they give CodePeer valuable extra info
+         --  Enable assertions, since they give CodePeer valuable extra info;
+         --  however, when switch -gnatd_k is active, then keep assertions
+         --  disabled by default and only enable them when explicitly
+         --  requested by pragma Assertion_Policy, just like in ordinary
+         --  compilation.
 
-         Assertions_Enabled := True;
+         Assertions_Enabled := not Debug_Flag_Underscore_K;
 
          --  Set normal RM validity checking and checking of copies (to catch
          --  e.g. wrong values used in unchecked conversions).

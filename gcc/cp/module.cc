@@ -13253,8 +13253,12 @@ depset::hash::add_binding_entity (tree decl, WMB_Flags flags, void *data_)
       data->met_namespace = true;
       if (data->hash->add_namespace_entities (decl, data->partitions))
 	{
-	  /* It contains an exported thing, so it is exported.  */
-	  gcc_checking_assert (DECL_MODULE_PURVIEW_P (decl));
+	  /* It contains an exported thing, so it is exported.
+
+	     FIXME we have to set DECL_MODULE_PURVIEW_P instead of asserting
+	     that it is already set because of the c++/114683 issue with
+	     exported using-declarations; see do_nonmember_using_decl.  */
+	  DECL_MODULE_PURVIEW_P (decl) = true;
 	  DECL_MODULE_EXPORT_P (decl) = true;
 	}
 
@@ -19975,10 +19979,6 @@ maybe_translate_include (cpp_reader *reader, line_maps *lmaps, location_t loc,
       cpp_get_callbacks (reader)->translate_include = NULL;
       return nullptr;
     }
-
-  if (!spans.init_p ())
-    /* Before the main file, don't divert.  */
-    return nullptr;
 
   dump.push (NULL);
 

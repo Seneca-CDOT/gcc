@@ -4083,6 +4083,15 @@ package body Sem_Ch6 is
          else
             Set_Corresponding_Spec (N, Spec_Id);
 
+            --  The body entity is not used for semantics or code generation,
+            --  but it is attached to the entity list of the enclosing scope
+            --  to allow listing its entities when outputting representation
+            --  information.
+
+            if Scope (Spec_Id) /= Standard_Standard then
+               Append_Entity (Body_Id, Scope (Spec_Id));
+            end if;
+
             --  Ada 2005 (AI-345): If the operation is a primitive operation
             --  of a concurrent type, the type of the first parameter has been
             --  replaced with the corresponding record, which is the proper
@@ -8663,9 +8672,12 @@ package body Sem_Ch6 is
       --  Determines if E has its extra formals
 
       function Might_Need_BIP_Task_Actuals (E : Entity_Id) return Boolean;
-      --  Determines if E is a dispatching primitive returning a limited tagged
-      --  type object since some descendant might return an object with tasks
-      --  (and therefore need the BIP task extra actuals).
+      --  Determines if E is a function or an access to a function returning a
+      --  limited tagged type object. On dispatching primitives this predicate
+      --  is used to determine if some descendant of the function might return
+      --  an object with tasks (and therefore need the BIP task extra actuals).
+      --  On access-to-subprogram types it is used to determine if the target
+      --  function might return an object with tasks.
 
       function Needs_Accessibility_Check_Extra
         (E      : Entity_Id;
@@ -8786,9 +8798,8 @@ package body Sem_Ch6 is
 
          Func_Typ := Root_Type (Underlying_Type (Etype (Subp_Id)));
 
-         return Ekind (Subp_Id) = E_Function
+         return Ekind (Subp_Id) in E_Function | E_Subprogram_Type
            and then not Has_Foreign_Convention (Func_Typ)
-           and then Is_Dispatching_Operation (Subp_Id)
            and then Is_Tagged_Type (Func_Typ)
            and then Is_Limited_Type (Func_Typ)
            and then not Has_Aspect (Func_Typ, Aspect_No_Task_Parts);
@@ -9171,9 +9182,15 @@ package body Sem_Ch6 is
             --  If the type does not have a completion yet, treat as prior to
             --  Ada 2012 for consistency.
 
-            if Has_Discriminants (Formal_Type)
+            --  Note that we need also to handle mutably tagged types in the
+            --  same way as discriminated types since they can be constrained
+            --  or unconstrained as well.
+
+            if (Has_Discriminants (Formal_Type)
+                 or else Is_Mutably_Tagged_Type (Formal_Type))
               and then not Is_Constrained (Formal_Type)
-              and then Is_Definite_Subtype (Formal_Type)
+              and then (Is_Definite_Subtype (Formal_Type)
+                         or else Is_Mutably_Tagged_Type (Formal_Type))
               and then (Ada_Version < Ada_2012
                          or else No (Underlying_Type (Formal_Type))
                          or else not
